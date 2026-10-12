@@ -22,6 +22,8 @@ as `CLI_Python_WSS_Application`) and a .NET runtime. Fake mode needs neither.
 
 ## Run it
 
+See [COMMANDS.md](COMMANDS.md) for every terminal command in one place.
+
 ```bash
 python run_gui.py --fake      # Test Pulse Window, no hardware needed
 python run_app.py --fake      # console version
