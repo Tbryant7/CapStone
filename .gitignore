@@ -11,3 +11,6 @@ htmlcov/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Runtime logs written by run_app.py
+logs/
