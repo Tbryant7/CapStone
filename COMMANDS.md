@@ -48,7 +48,8 @@ quick and picks up any new packages someone added.
 | `python run_gui.py --fake` | Open the window with the fake WSS. No hardware or .NET needed. **Use this one on your laptop.** |
 | `python run_gui.py --fake --fake-disconnect-after 3` | Fake WSS that drops the connection by itself after 3 commands |
 | `python run_gui.py --simulated` | Wrapper's built-in test transport (needs .NET, the DLLs and the wrapper submodule) |
-| `python run_gui.py` | Real WSS hardware (lab computer). Uses the mode in `config\app_config.json` if one is set |
+| `python run_gui.py` | Uses the mode in `config\app_config.json` (currently `fake`) |
+| `python run_gui.py --comm-mode hardware` | Real WSS hardware (lab computer) |
 | `python run_gui.py --help` | List every option |
 
 In the window: **Connect**, then **Send Test Pulse**, then **STOP**.
