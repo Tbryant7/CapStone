@@ -1,0 +1,12 @@
+{
+  "communication": {
+    "mode": "fake",
+    "config_dir": "Config",
+    "cs_lib_dir": "external/wss-py-wrapper/Cs_Libraries",
+    "wrapper_src": "external/wss-py-wrapper/src",
+    "serial_port": null,
+    "log_dir": "logs",
+    "fake_disconnect_after_commands": null,
+    "fake_disconnect_after_seconds": null
+  }
+}
