@@ -138,14 +138,14 @@ def test_wss_connect_port_reaches_wrapper_config_and_unplug_is_detected(tmp_path
     assert a.check_connection() is False
     assert a.status().state is ConnectionState.LOST
 
- def test_wrong_port_shows_clear_error(tmp_path):
+def test_wrong_port_shows_clear_error(tmp_path):
     class FailingController(_Ctrl):
         def Initialize(self):
-            raise OSError("Port COM7 is unavailable")
+            raise OSError("Port COM99 is unavailable")
 
     adapter = WssCommunicationAdapter(
         config_dir=tmp_path,
-        log_path+tmp_path / "w.log",
+        log_path=tmp_path / "w.log",
         cs_lib_dir=tmp_path,
         controller_factory=FailingController,
         config_factory=_Cfg,
@@ -155,7 +155,7 @@ def test_wss_connect_port_reaches_wrapper_config_and_unplug_is_detected(tmp_path
         adapter.connect("COM99")
 
     assert not adapter.is_connected
-    assert.adapter.command_log[-1].commant == "connect"
+    assert adapter.command_log[-1].command == "connect"
     assert "error:" in adapter.command_log[-1].outcome
  
     
