@@ -11,14 +11,14 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from communication import (  # noqa: E402
+from comms import (  # noqa: E402
     ConnectionLostError,
     ConnectionState,
     FakeCommunicationAdapter,
     create_adapter,
     resolve_mode,
 )
-from communication.wss_adapter import WssCommunicationAdapter  # noqa: E402
+from comms.wss_adapter import WssCommunicationAdapter  # noqa: E402
 
 WRAPPER_SRC = ROOT / "external" / "wss-py-wrapper" / "src"
 
