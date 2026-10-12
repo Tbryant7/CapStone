@@ -129,6 +129,15 @@ class WssCommunicationAdapter(CommunicationAdapter):
     def _do_stimulate_analog(self, channel: int, pw: int, amp: int, ipi: int) -> None:
         self._ctrl().StimulateAnalog(f"ch{channel}", int(pw), int(amp), int(ipi))
 
+    def _set_port(self, port: str) -> None:
+        self.wss_config = replace(self.wss_config, serial_port=port)
+
+    def _is_alive(self) -> bool:
+        # Not yet confirmed on the real WSS: assumes the core leaves the
+        # Ready/Started states when the serial link fails.
+        ctrl = self._controller
+        return ctrl is not None and bool(ctrl.Ready() or ctrl.Started())
+
     def _on_simulated_disconnect(self) -> None:
         # The C# TestModeTransport cannot be told to drop the link from
         # Python: the wrapper never exposes the transport object. So the fake

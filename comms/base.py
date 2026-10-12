@@ -28,6 +28,9 @@ from typing import Any, Callable
 
 logger = logging.getLogger("wss_comm")
 
+#: Inter-pulse interval used by ``send_test_pulse`` when none is given.
+DEFAULT_TEST_IPI = 50
+
 
 class ConnectionState(str, Enum):
     DISCONNECTED = "disconnected"
@@ -94,8 +97,20 @@ class CommunicationAdapter:
 
     # ------------------------------------------------------------------ API
 
-    def connect(self) -> None:
-        self._run("connect", {}, self._do_connect, require_connection=False)
+    def connect(self, port: str | None = None) -> None:
+        """Open the link to the WSS.
+
+        :param port: Serial port to use (for example ``"COM3"``). ``None``
+            keeps the port from the config, or auto-detects it.
+        """
+        args = {} if port is None else {"port": port}
+
+        def action() -> None:
+            if port is not None:
+                self._set_port(port)
+            self._do_connect()
+
+        self._run("connect", args, action, require_connection=False)
         self._set_state(ConnectionState.CONNECTED, "connected")
 
     def disconnect(self) -> None:
@@ -149,6 +164,50 @@ class CommunicationAdapter:
             {"channel": channel, "pulse_width": pulse_width, "amplitude": amplitude, "ipi": ipi},
             lambda: self._do_stimulate_analog(channel, pulse_width, amplitude, ipi),
         )
+
+    def send_test_pulse(
+        self, channel: int, pulse_width: int, amplitude: int, ipi: int = DEFAULT_TEST_IPI
+    ) -> None:
+        """Deliver a test pulse train on one channel (Sprint 1 Test Pulse Window).
+
+        Starts stimulation if it is not already running, then sends the
+        explicit pulse width / amplitude / inter-pulse interval. Call
+        :meth:`stop` to end it.
+        """
+        if not self._stimulating:
+            self.start_stimulation()
+        self.stimulate_analog(channel, pulse_width, amplitude, ipi)
+
+    def stop(self) -> None:
+        """Stop all stimulation. Same as :meth:`stop_stimulation`; never raises
+        because the link is down (SRS REQ-19)."""
+        self.stop_stimulation()
+
+    def check_connection(self) -> bool:
+        """Ask the backend whether the link is still alive.
+
+        The GUI calls this every second or so. If a connected adapter finds
+        the device gone (for example the WSS was unplugged), the state
+        switches to ``LOST`` and status listeners are told, exactly like a
+        fake disconnect. Returns ``is_connected`` after the check.
+        """
+        if not self.is_connected:
+            return False
+        try:
+            alive = self._is_alive()
+            reason = "WSS stopped responding"
+        except Exception as ex:
+            alive, reason = False, f"WSS check failed: {ex}"
+        if not alive and self.is_connected:
+            self._record("check_connection", {}, f"lost: {reason}")
+            logger.warning("[%s] connection LOST: %s", self.mode, reason)
+            self._stimulating = False
+            self._set_state(ConnectionState.LOST, reason)
+        return self.is_connected
+
+    @property
+    def stimulating(self) -> bool:
+        return self._stimulating
 
     def status(self) -> AdapterStatus:
         return AdapterStatus(self.mode, self._state, self._stimulating, self._status_detail())
@@ -205,6 +264,13 @@ class CommunicationAdapter:
 
     def _do_stimulate_analog(self, channel: int, pw: int, amp: int, ipi: int) -> None:
         raise NotImplementedError
+
+    def _set_port(self, port: str) -> None:
+        """Optional: use ``port`` for the next connect. Default ignores it."""
+
+    def _is_alive(self) -> bool:
+        """Optional: return False if the device has gone away. Default: alive."""
+        return True
 
     def _on_simulated_disconnect(self) -> None:
         """Optional: backend-specific work when a fake disconnect happens."""

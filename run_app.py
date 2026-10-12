@@ -15,7 +15,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from communication import (
+from comms import (
     ConnectionLostError,
     add_mode_arguments,
     create_adapter,
