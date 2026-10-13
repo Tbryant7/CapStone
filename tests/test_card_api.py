@@ -6,6 +6,7 @@ None of them need hardware or .NET."""
 from __future__ import annotations
 
 import sys
+import threading
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -137,3 +138,40 @@ def test_wss_connect_port_reaches_wrapper_config_and_unplug_is_detected(tmp_path
     made[-1].ready = False  # core left Ready/Started, as after an unplug
     assert a.check_connection() is False
     assert a.status().state is ConnectionState.LOST
+
+def test_stop_responds_while_another_command_is_busy():
+    busy_started = threading.Event()
+    release_busy = threading.Event()
+
+    class BusyAdapter(FakeCommunicationAdapter):
+        def _do_stimulate(self, channel, magnitude):
+            busy_started.set()
+            release_busy.wait(timeout=2)
+
+    adapter = BusyAdapter()
+    adapter.connect()
+
+    worker = threading.Thread(
+        target=lambda: adapter.stimulate(1, 0.5),
+        daemon=True,
+    )
+
+    worker.start()
+
+    try:
+        assert busy_started.wait(timeout=1)
+
+        stop_worker = threading.Thread(
+            target=adapter.stop,
+            daemon=True,
+        )
+        stop_worker.start()
+        stop_worker.join(timeout=0.5)
+
+        assert not stop_worker.is_alive(), (
+            "STOP was blocked by another operation"
+        )
+        assert not adapter.stimulating
+    finally:
+        release_busy.set()
+        worker.join(timeout=2)
