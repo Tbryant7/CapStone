@@ -8,7 +8,7 @@ COSMIIC Wireless Stimulation System (WSS).
 You need Python 3.10 or newer and Git.
 
 ```bash
-git clone https://github.com/Tbryant7/CapStone.git
+git clone --recursive https://github.com/Tbryant7/CapStone.git
 cd CapStone
 python -m venv .venv
 .venv\Scripts\activate          # Windows
@@ -16,9 +16,23 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
-To run against the real WSS or the wrapper's simulated transport you also
-need the `wss-py-wrapper` submodule in `external/wss-py-wrapper` (same layout
-as `CLI_Python_WSS_Application`) and a .NET runtime. Fake mode needs neither.
+`--recursive` also downloads the COSMIIC wrapper library
+([HFI_WSS_Python_Interface](https://github.com/cwru-non-academic/HFI_WSS_Python_Interface))
+into `external/wss-py-wrapper`, the same way
+[CLI_Python_WSS_Application](https://github.com/cwru-non-academic/CLI_Python_WSS_Application)
+does. If you already cloned without it, run:
+
+```bash
+git submodule update --init
+```
+
+Fake mode needs only the steps above. To run against the real WSS or the
+wrapper's simulated transport (`--simulated`), also install the wrapper and
+pythonnet, and have a .NET runtime:
+
+```bash
+pip install -e external/wss-py-wrapper
+```
 
 ## Run it
 
@@ -168,8 +182,9 @@ tests/test_card_api.py   connect(port), send_test_pulse, stop, unplug detection
 tests/test_pulse_window_gui.py   Test Pulse Window, off-screen
 ```
 
-`external/wss-py-wrapper` is expected to be the wrapper submodule, the same
-layout as `CLI_Python_WSS_Application`.
+`external/wss-py-wrapper` is the wrapper submodule
+(`HFI_WSS_Python_Interface`), pinned to the same commit as
+`CLI_Python_WSS_Application`.
 
 ## Tests
 
