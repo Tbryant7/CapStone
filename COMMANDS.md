@@ -15,14 +15,19 @@ each section.
 ## 1. First-time setup (once per computer)
 
 ```
-git clone https://github.com/Tbryant7/CapStone.git
+git clone --recursive https://github.com/Tbryant7/CapStone.git
 cd CapStone
 python -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
+- `--recursive` also downloads the COSMIIC wrapper library into
+  `external\wss-py-wrapper`. Already cloned without it? Run
+  `git submodule update --init`.
 - `python -m venv .venv` makes a private Python environment for this project.
+- Only for `--simulated` or real hardware (needs .NET):
+  `pip install -e external\wss-py-wrapper`
 - macOS / Linux: activate with `source .venv/bin/activate`.
 - If `python` isn't found, try `py` instead.
 
@@ -33,6 +38,7 @@ cd "C:\Users\<you>\OneDrive - Quinnipiac University\CapstoneProject"
 .venv\Scripts\activate
 git checkout main
 git pull
+git submodule update --init
 pip install -r requirements.txt
 ```
 
@@ -113,7 +119,8 @@ set `"mode": "fake"` in `config\app_config.json`. It's already set that way.
 | `python -m pytest -k disconnect` | Only tests with "disconnect" in the name |
 | `python -m pytest -rs` | Also say why skipped tests were skipped |
 
-The 6 skipped tests need the `wss-py-wrapper` submodule, which isn't added yet.
+If 6 tests are skipped, the wrapper submodule is missing: run
+`git submodule update --init`.
 
 ---
 
@@ -169,6 +176,7 @@ code .
 
 | Problem | Fix |
 |---|---|
+| `external\wss-py-wrapper` is empty | `git submodule update --init` |
 | `No module named PySide6` or `pytest` | Activate the venv (`.venv\Scripts\activate`), then `pip install -r requirements.txt` |
 | `python` not recognized | Use `py` instead, or install Python from python.org and tick "Add to PATH" |
 | `Could not connect in simulated mode` | You don't have .NET / the DLLs. Use `--fake` |

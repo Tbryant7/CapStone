@@ -1,0 +1,3 @@
+[submodule "external/wss-py-wrapper"]
+	path = external/wss-py-wrapper
+	url = https://github.com/cwru-non-academic/HFI_WSS_Python_Interface.git
