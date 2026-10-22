@@ -25,6 +25,8 @@ RECENT_PROGRAMS_FILE = (
     Path(__file__).resolve().parent.parent / "config" / "recent_programs.json"
 )
 
+STYLE_FILE = Path(__file__).resolve().parent / "main_menu.qss"
+
 
 class MainMenuWindow(QMainWindow):
     """Screen 1 main menu based on SDS Figure 4.2."""
@@ -129,6 +131,12 @@ class MainMenuWindow(QMainWindow):
         self.open_button = QPushButton("Open Selected")
         self.help_button = QPushButton("Documentation / Help")
 
+        # Names used by the QSS stylesheet
+        self.new_button.setObjectName("newProgramButton")
+        self.import_button.setObjectName("importProgramButton")
+        self.open_button.setObjectName("openSelectedButton")
+        self.help_button.setObjectName("helpButton")
+
         for button in (
             self.new_button,
             self.import_button,
@@ -165,105 +173,22 @@ class MainMenuWindow(QMainWindow):
         # Finish building the window
         self.setCentralWidget(root)
 
-        # Styling based on SDS Figure 4.2
-        self.setStyleSheet("""
-            QMainWindow {
-                background-color: #f4f6f8;
-            }
+        # Load all styling from the separate QSS file
+        if STYLE_FILE.exists():
+            with STYLE_FILE.open("r", encoding="utf-8") as file:
+                self.setStyleSheet(file.read())
+        else:
+            QMessageBox.warning(
+                self,
+                "Stylesheet Missing",
+                "Could not find ui/main_menu.qss.",
+            )
 
-            #mainHeader {
-                background-color: #263b53;
-                color: white;
-                font-size: 22px;
-                font-weight: bold;
-            }
-
-            QGroupBox {
-                background-color: #fafafa;
-                border: 1px solid #888888;
-                border-radius: 0px;
-                margin-top: 12px;
-                padding: 6px;
-                font-weight: bold;
-            }
-
-            QGroupBox::title {
-                subcontrol-origin: margin;
-                left: 12px;
-                padding: 0 5px;
-            }
-
-            QListWidget {
-                background-color: #ffffff;
-                border: 1px solid #b8b8b8;
-                border-radius: 0px;
-                padding: 8px;
-                outline: none;
-            }
-
-            QListWidget::item {
-                background-color: #f8f8f8;
-                border: 1px solid #b8b8b8;
-                border-radius: 0px;
-                padding: 4px;
-                margin-bottom: 5px;
-                color: #222222;
-            }
-
-            QListWidget::item:selected {
-                background-color: #e5edf5;
-                border: 1px solid #6485a5;
-                color: #222222;
-            }
-
-            QPushButton {
-                background-color: #e2eaf3;
-                border: 1px solid #b7c7d8;
-                border-radius: 4px;
-                padding: 4px;
-                font-size: 13px;
-            }
-
-            QPushButton:hover {
-                background-color: #d2e0ee;
-            }
-
-            QPushButton:checked {
-                background-color: #366a9b;
-                color: white;
-                font-weight: bold;
-            }
-
-            #deviceStatus {
-                background-color: #e8f2e6;
-                color: #28552b;
-                border: 2px solid #5a963f;
-                font-weight: normal;
-            }
-        """)
-
-        # Button colors
-        self.new_button.setStyleSheet(
-            "background-color: #dce9f6; border: 2px solid #4d83b7;"
-        )
-        self.import_button.setStyleSheet(
-            "background-color: #dce9f6; border: 2px solid #4d83b7;"
-        )
-        self.open_button.setStyleSheet(
-            "background-color: #e2efdc; border: 2px solid #5a963f;"
-        )
-        self.help_button.setStyleSheet(
-            "background-color: #fff0d3; border: 2px solid #c99b16;"
-        )
-
-        # Buttons for later sprints
+        # Connect the four buttons
         self.new_button.clicked.connect(self._coming_soon)
         self.help_button.clicked.connect(self._coming_soon)
         self.import_button.clicked.connect(self._choose_program_file)
         self.open_button.clicked.connect(self._open_selected_program)
-
-        # Import and Open Selected will be connected to
-        # ProgramFileManager when the teammate's code is ready.
 
     def _select_mode(self, mode: str) -> None:
         """Allow only one mode to be selected."""
@@ -397,7 +322,7 @@ class MainMenuWindow(QMainWindow):
                 "Save Error",
                 "Unable to save the recent programs list.",
             )
-    
+
     def _choose_program_file(self) -> None:
         """Open a file picker to select a program."""
         file_path, _ = QFileDialog.getOpenFileName(
@@ -417,8 +342,7 @@ class MainMenuWindow(QMainWindow):
             "Program loading will be available after "
             "ProgramFileManager integration.",
         )
-    
-    
+
     def _open_selected_program(self) -> None:
         """Handle opening a selected recent program."""
         row = self.recent_list.currentRow()

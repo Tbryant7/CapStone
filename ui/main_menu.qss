@@ -1,0 +1,92 @@
+
+QMainWindow {
+    background-color: #f4f6f8;
+}
+
+#mainHeader {
+    background-color: #263b53;
+    color: white;
+    font-size: 22px;
+    font-weight: bold;
+}
+
+QGroupBox {
+    background-color: #fafafa;
+    border: 1px solid #888888;
+    border-radius: 0px;
+    margin-top: 12px;
+    padding: 6px;
+    font-weight: bold;
+}
+
+QGroupBox::title {
+    subcontrol-origin: margin;
+    left: 12px;
+    padding: 0 5px;
+}
+
+QListWidget {
+    background-color: #ffffff;
+    border: 1px solid #b8b8b8;
+    border-radius: 0px;
+    padding: 8px;
+    outline: none;
+}
+
+QListWidget::item {
+    background-color: #f8f8f8;
+    border: 1px solid #b8b8b8;
+    border-radius: 0px;
+    padding: 4px;
+    margin-bottom: 5px;
+    color: #222222;
+}
+
+QListWidget::item:selected {
+    background-color: #e5edf5;
+    border: 1px solid #6485a5;
+    color: #222222;
+}
+
+QPushButton {
+    background-color: #e2eaf3;
+    border: 1px solid #b7c7d8;
+    border-radius: 4px;
+    padding: 4px;
+    font-size: 13px;
+}
+
+QPushButton:hover {
+    background-color: #d2e0ee;
+}
+
+QPushButton:checked {
+    background-color: #366a9b;
+    color: white;
+    font-weight: bold;
+}
+
+#deviceStatus {
+    background-color: #e8f2e6;
+    color: #28552b;
+    border: 2px solid #5a963f;
+    font-weight: normal;
+}
+
+
+QPushButton#newProgramButton,
+QPushButton#importProgramButton {
+    background-color: #dce9f6;
+    border: 2px solid #4d83b7;
+}
+
+QPushButton#openSelectedButton {
+    background-color: #e2efdc;
+    border: 2px solid #5a963f;
+}
+
+QPushButton#helpButton {
+    background-color: #fff0d3;
+    border: 2px solid #c99b16;
+}
+
