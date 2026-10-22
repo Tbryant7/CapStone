@@ -8,6 +8,7 @@ from pathlib import Path
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
+    QFileDialog,
     QGridLayout,
     QGroupBox,
     QHBoxLayout,
@@ -258,6 +259,8 @@ class MainMenuWindow(QMainWindow):
         # Buttons for later sprints
         self.new_button.clicked.connect(self._coming_soon)
         self.help_button.clicked.connect(self._coming_soon)
+        self.import_button.clicked.connect(self._choose_program_file)
+        self.open_button.clicked.connect(self._open_selected_program)
 
         # Import and Open Selected will be connected to
         # ProgramFileManager when the teammate's code is ready.
@@ -394,3 +397,43 @@ class MainMenuWindow(QMainWindow):
                 "Save Error",
                 "Unable to save the recent programs list.",
             )
+    
+    def _choose_program_file(self) -> None:
+        """Open a file picker to select a program."""
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Import Program / MATLAB File",
+            "",
+            "Program Files (*.json *.mat);;JSON Files (*.json);;MATLAB Files (*.mat)",
+        )
+
+        if not file_path:
+            return
+
+        QMessageBox.information(
+            self,
+            "Program Selected",
+            f"Selected file: {Path(file_path).name}\n\n"
+            "Program loading will be available after "
+            "ProgramFileManager integration.",
+        )
+    
+    
+    def _open_selected_program(self) -> None:
+        """Handle opening a selected recent program."""
+        row = self.recent_list.currentRow()
+
+        if row < 0 or row >= len(self._recent_programs):
+            QMessageBox.information(
+                self,
+                "No Program Selected",
+                "Please select a recent program first.",
+            )
+            return
+
+        QMessageBox.information(
+            self,
+            "Program Opening",
+            "Program loading will be connected "
+            "when ProgramFileManager is ready.",
+        )
