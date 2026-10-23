@@ -266,6 +266,7 @@ class MainMenuWindow(QMainWindow):
         name: str,
         description: str,
         last_run: str,
+        file_path: str = "",
     ) -> None:
         """Save a recently opened program to the settings file."""
         try:
@@ -297,6 +298,7 @@ class MainMenuWindow(QMainWindow):
                     "name": name,
                     "description": description,
                     "last_run": last_run,
+                    "file_path": file_path,
                 },
             )
 
