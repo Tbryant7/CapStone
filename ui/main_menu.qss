@@ -1,18 +1,18 @@
 
 QMainWindow {
-    background-color: #f4f6f8;
+    background-color: #ffffff;
 }
 
 #mainHeader {
-    background-color: #263b53;
+    background-color: #2e4055;
     color: white;
-    font-size: 22px;
+    font-size: 20px;
     font-weight: bold;
 }
 
 QGroupBox {
     background-color: #fafafa;
-    border: 1px solid #888888;
+    border: 2px solid #888888;
     border-radius: 0px;
     margin-top: 12px;
     padding: 6px;
@@ -21,58 +21,58 @@ QGroupBox {
 
 QGroupBox::title {
     subcontrol-origin: margin;
-    left: 12px;
-    padding: 0 5px;
+    left: 8px;
+    padding: 0 4px;
 }
 
 QListWidget {
-    background-color: #ffffff;
-    border: 1px solid #b8b8b8;
+    background-color: #fafafa;
+    border: 1px solid #888888;
     border-radius: 0px;
-    padding: 8px;
+    padding: 6px;
     outline: none;
 }
 
 QListWidget::item {
-    background-color: #f8f8f8;
-    border: 1px solid #b8b8b8;
+    background-color: #ffffff;
+    border: 2px solid #888888;
     border-radius: 0px;
-    padding: 4px;
+    padding: 5px;
     margin-bottom: 5px;
-    color: #222222;
+    color: #333333;
 }
 
 QListWidget::item:selected {
     background-color: #e5edf5;
-    border: 1px solid #6485a5;
+    border: 2px solid #6485a5;
     color: #222222;
 }
 
 QPushButton {
-    background-color: #e2eaf3;
-    border: 1px solid #b7c7d8;
+    background-color: #f5f5f5;
+    border: 2px solid #888888;
     border-radius: 4px;
     padding: 4px;
     font-size: 13px;
 }
 
 QPushButton:hover {
-    background-color: #d2e0ee;
+    background-color: #e5edf5;
 }
 
 QPushButton:checked {
-    background-color: #366a9b;
-    color: white;
-    font-weight: bold;
+    background-color: #dce9f6;
+    border: 2px solid #4d83b7;
+    color: #333333;
+    font-weight: normal;
 }
 
 #deviceStatus {
     background-color: #e8f2e6;
-    color: #28552b;
+    color: #444444;
     border: 2px solid #5a963f;
     font-weight: normal;
 }
-
 
 QPushButton#newProgramButton,
 QPushButton#importProgramButton {
@@ -89,4 +89,3 @@ QPushButton#helpButton {
     background-color: #fff0d3;
     border: 2px solid #c99b16;
 }
-

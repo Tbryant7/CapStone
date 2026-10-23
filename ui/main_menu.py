@@ -36,7 +36,7 @@ class MainMenuWindow(QMainWindow):
 
         self.setWindowTitle("COSMIIC - Main Menu")
         self.setMinimumSize(900, 600)
-        self.resize(900, 650)
+        self.resize(900, 600)
 
         self._recent_programs = []
 
@@ -89,7 +89,7 @@ class MainMenuWindow(QMainWindow):
 
         # Recent Programs and right panel
         content_layout = QHBoxLayout()
-        content_layout.setSpacing(20)
+        content_layout.setSpacing(10)
 
         recent_group = QGroupBox("Recent Stimulation Programs")
         recent_layout = QVBoxLayout(recent_group)
