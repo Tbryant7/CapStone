@@ -7,8 +7,23 @@ Run them from the project folder, for example:
 cd "C:\Users\<you>\OneDrive - Quinnipiac University\CapstoneProject"
 ```
 
-macOS / Linux users: use `/` instead of `\` in paths, and see the notes in
-each section.
+macOS / Linux users: use `/` instead of `\` in paths, and
+`source .venv/bin/activate` to activate the environment.
+
+**Contents**
+
+1. First-time setup
+2. Every time you start working
+3. Demo run-through (Sprint 1 and Sprint 2)
+4. Test Pulse Window options
+5. Fake WSS in the terminal
+6. Check program files (ValidationEngine)
+7. Safety limits file (ranges.json)
+8. Change the test pulse values
+9. Run the tests
+10. Git: sharing your work
+11. Open the project in VS Code
+12. Troubleshooting
 
 ---
 
@@ -28,7 +43,6 @@ pip install -r requirements.txt
 - `python -m venv .venv` makes a private Python environment for this project.
 - Only for `--simulated` or real hardware (needs .NET):
   `pip install -e external\wss-py-wrapper`
-- macOS / Linux: activate with `source .venv/bin/activate`.
 - If `python` isn't found, try `py` instead.
 
 ## 2. Every time you start working
@@ -45,34 +59,162 @@ pip install -r requirements.txt
 `git pull` gets your teammates' latest work. Re-running `pip install` is
 quick and picks up any new packages someone added.
 
+**To try work that isn't merged yet**, switch to its branch first, and go
+back to `main` when you're done:
+
+```
+git fetch
+git checkout sprint2/wss-status-bar
+...
+git checkout main
+```
+
 ---
 
-## 3. Run the Test Pulse Window (GUI)
+## 3. Demo run-through (Sprint 1 and Sprint 2)
 
-| Command | What it does |
-|---|---|
-| `python run_gui.py --fake` | Open the window with the fake WSS. No hardware or .NET needed. **Use this one on your laptop.** |
-| `python run_gui.py --fake --fake-channels 6` | Fake WSS that reports 6 channels (shown in the status bar) |
-| `python run_gui.py --fake --fake-disconnect-after 3` | Fake WSS that drops the connection by itself after 3 commands |
-| `python run_gui.py --simulated` | Wrapper's built-in test transport (needs .NET, the DLLs and the wrapper submodule) |
-| `python run_gui.py` | Uses the mode in `config\app_config.json` (currently `fake`) |
-| `python run_gui.py --comm-mode hardware` | Real WSS hardware (lab computer) |
-| `python run_gui.py --help` | List every option |
+Do sections 1-2 first, then `cls` to clear the screen before recording.
+Everything here uses the fake WSS, so no hardware is needed.
 
-In the window: **Connect**, then **Send Test Pulse**, then **STOP**.
-**Simulate disconnect** tests the "Connection lost" state.
-The status bar at the bottom always shows the WSS connection, the channel
-count the device reports, and a SIMULATED label when no real WSS is used.
-
-## 4. Run the fake WSS in the terminal (no window)
+### Sprint 1: Fake WSS (terminal)
 
 ```
 python run_app.py --fake
 ```
 
-Then type these at the `>` prompt:
+At the `>` prompt, type these one at a time:
 
-| Type | What it does |
+```
+start
+stim 1 0.5
+drop
+stim 1 0.5
+reconnect
+log
+quit
+```
+
+Show: every command is logged; after `drop` the next command is
+**rejected** ("CONNECTION LOST"); `log` lists everything, including the
+rejected command; `quit` stops stimulation safely before exiting.
+
+### Sprint 1: Test Pulse Window
+
+```
+python run_gui.py --fake
+```
+
+1. **Connect**: status turns green "Connected".
+2. **Send Test Pulse**: output says "Stimulating on channel 1" and a log line appears.
+3. **STOP**: output goes back to "Off".
+4. **Send Test Pulse**, then **Simulate disconnect**: status turns red
+   "Connection lost" and stimulation stops by itself.
+5. **Connect** again to recover, then close the window.
+
+### Sprint 2: Safe range config file
+
+The safety limits live in one file. Show it:
+
+```
+type validation\ranges.json
+```
+
+Point out the min/max for pulse width, amplitude, frequency and time step,
+and `"confirmed": false` (the numbers are placeholders until COSMIIC
+confirms them). Every start prints a PLACEHOLDER warning until then.
+
+Show that the app **refuses to start** without a valid limits file:
+
+```
+python run_gui.py --fake --ranges missing.json
+```
+
+Expected: `Cannot start: Safe range file not found: missing.json` and no window.
+
+### Sprint 2: ValidationEngine
+
+Check the three sample programs against the limits:
+
+```
+python -m validation samples\valid_1_channel.json samples\valid_4_channel.json samples\unsafe_amplitude.json
+```
+
+Expected:
+
+```
+samples\valid_1_channel.json (Single channel test): PASSED
+
+samples\valid_4_channel.json (Four channel test): PASSED
+
+samples\unsafe_amplitude.json (Unsafe amplitude (demo)): FAILED
+  - Channel 2 amplitude 40 mA is above the 3 mA limit.
+```
+
+Optional: show that limits change without touching code. Open
+`validation\ranges.json`, change amplitude `"max": 3` to `50`, save, re-run
+the command above (now everything passes), then put it back:
+
+```
+git restore validation\ranges.json
+```
+
+Then show the automated tests (values at, just under and just over every
+limit, empty program, missing values):
+
+```
+python -m pytest tests\test_validation_engine.py tests\test_range_table.py -v
+```
+
+### Sprint 2: WSS status bar
+
+```
+python run_gui.py --fake --fake-channels 6
+```
+
+Watch the bar along the bottom of the window:
+
+1. Before connecting: "WSS: Not connected | Channels: none (not connected)",
+   plus a yellow **SIMULATED (fake mode)** label on the right.
+2. **Connect**: "WSS: Connected | Channels: 6". The count comes from the
+   (fake) device, not a hard-coded 4. Try `--fake-channels 3` to show it changes.
+3. **Simulate disconnect**: "WSS: Connection lost (simulated disconnect)"
+   right away.
+4. **Connect** again: back to "Connected".
+
+Every state is written in words; the color is only an extra cue.
+
+To show an automatic drop without clicking anything:
+
+```
+python run_gui.py --fake --fake-disconnect-after 2
+```
+
+Click **Connect**, then **Send Test Pulse** once. That click sends two
+commands (start, then the pulse), so the fake WSS drops right after it and
+the bar switches to "Connection lost" by itself.
+
+---
+
+## 4. Test Pulse Window options
+
+| Command | What it does |
+|---|---|
+| `python run_gui.py --fake` | Window with the fake WSS. No hardware or .NET needed. **Use this one on your laptop.** |
+| `python run_gui.py --fake --fake-channels 6` | Fake WSS that reports 6 channels (shown in the status bar) |
+| `python run_gui.py --fake --fake-disconnect-after 3` | Fake WSS that drops the connection by itself after 3 commands |
+| `python run_gui.py --fake --ranges path\to\ranges.json` | Use a different safety limits file |
+| `python run_gui.py --simulated` | Wrapper's built-in test transport (needs .NET, the DLLs and the wrapper submodule) |
+| `python run_gui.py` | Uses the mode in `config\app_config.json` (currently `fake`) |
+| `python run_gui.py --comm-mode hardware` | Real WSS hardware (lab computer) |
+| `python run_gui.py --help` | List every option |
+
+## 5. Fake WSS in the terminal
+
+```
+python run_app.py --fake
+```
+
+| Type at the `>` prompt | What it does |
 |---|---|
 | `start` | Start stimulation |
 | `stim 1 0.5` | Channel 1 at 50% (normalized 0 to 1) |
@@ -84,19 +226,61 @@ Then type these at the `>` prompt:
 | `reconnect` | Connect again after a drop |
 | `quit` | Stop safely and exit |
 
-Other options work here too: `--simulated`, `--fake-disconnect-after 3`, `--help`.
+The same options work here: `--fake-channels`, `--fake-disconnect-after`,
+`--ranges`, `--simulated`, `--help`.
 
 Every run writes a log file to `logs\commands_<date>_<time>.log`.
 
-## 5. Change the test pulse values
+## 6. Check program files (ValidationEngine)
 
-The values are in code, not in the window. Open the file:
+| Command | What it does |
+|---|---|
+| `python -m validation samples\valid_4_channel.json` | Check one program file |
+| `python -m validation samples\valid_1_channel.json samples\unsafe_amplitude.json` | Check several at once |
+| `python -m validation my_program.json --ranges other_ranges.json` | Check against a different limits file |
+| `python -m validation --help` | List every option |
+
+Each file prints **PASSED** or **FAILED** with one plain-language line per
+problem (out of range, missing value, not a number, duplicate channel,
+empty program). It exits with an error code if any file fails.
+
+Sample programs in `samples\`:
+
+| File | Expected result |
+|---|---|
+| `valid_1_channel.json` | PASSED: one channel at low settings |
+| `valid_4_channel.json` | PASSED: four channels inside the limits |
+| `unsafe_amplitude.json` | FAILED: channel 2 amplitude 40 mA is over the limit |
+
+To make your own, copy a sample and change the numbers. Units are in the
+field names: `pulse_width_us` (µs), `amplitude_ma` (mA), `frequency_hz`
+(Hz), `time_step_ms` (ms).
+
+## 7. Safety limits file (ranges.json)
+
+```
+code validation\ranges.json
+```
+
+Edit the `min` / `max` numbers and save. No code changes are needed.
+
+- The app **won't start** if the file is missing or broken, and the message
+  says what's wrong.
+- Until COSMIIC confirms the limits, keep `"confirmed": false`. The app
+  prints a PLACEHOLDER warning on every start.
+- When COSMIIC confirms them: put their numbers in, write where they came
+  from in `"source"`, and set `"confirmed": true`.
+- Undo your edits: `git restore validation\ranges.json`
+
+## 8. Change the test pulse values
+
+The Test Pulse Window's values are set in code, not in the window. Open:
 
 ```
 code ui\pulse_window.py
 ```
 
-Edit lines 34-37, save, and re-run `python run_gui.py --fake`:
+Near the top, edit these, save, and re-run `python run_gui.py --fake`:
 
 ```python
 TEST_CHANNEL = 1
@@ -107,36 +291,19 @@ TEST_IPI = 50
 
 Confirm the values with COSMIIC before using real hardware.
 
-To make the fake WSS the default (so plain `python run_gui.py` uses it),
-set `"mode": "fake"` in `config\app_config.json`. It's already set that way.
-
 ---
 
-## 5b. Change the safety limits
-
-Open the limits file, edit the min/max numbers, and save:
-
-```
-code validation\ranges.json
-```
-
-The app won't start if the file is missing or broken, and prints a
-PLACEHOLDER warning until `"confirmed"` is set to `true`. To check a
-different limits file without editing the real one:
-
-```
-python run_gui.py --fake --ranges path\to\other_ranges.json
-```
-
-## 6. Run the tests
+## 9. Run the tests
 
 | Command | What it does |
 |---|---|
 | `python -m pytest` | Run every test |
 | `python -m pytest -v` | Same, listing each test by name |
-| `python -m pytest tests\test_pulse_window_gui.py` | Only the window tests |
+| `python -m pytest tests\test_validation_engine.py` | ValidationEngine and `python -m validation` |
+| `python -m pytest tests\test_range_table.py` | Safe range file and "refuses to start" |
+| `python -m pytest tests\test_wss_status_bar.py` | WSS status bar and channel count |
+| `python -m pytest tests\test_pulse_window_gui.py` | Test Pulse Window |
 | `python -m pytest -k disconnect` | Only tests with "disconnect" in the name |
-| `python -m pytest tests\test_validation_engine.py` | Only the ValidationEngine tests |
 | `python -m pytest -rs` | Also say why skipped tests were skipped |
 
 If 6 tests are skipped, the wrapper submodule is missing: run
@@ -144,7 +311,7 @@ If 6 tests are skipped, the wrapper submodule is missing: run
 
 ---
 
-## 7. Git: sharing your work
+## 10. Git: sharing your work
 
 `main` is shared, so make changes on your own branch and open a pull request.
 
@@ -182,9 +349,7 @@ Handy extras:
 | `git restore <file>` | Throw away your changes to one file |
 | `git switch <branch>` | Move to another branch |
 
----
-
-## 8. Open the project in VS Code
+## 11. Open the project in VS Code
 
 ```
 code .
@@ -192,13 +357,16 @@ code .
 
 ---
 
-## Troubleshooting
+## 12. Troubleshooting
 
 | Problem | Fix |
 |---|---|
 | `external\wss-py-wrapper` is empty | `git submodule update --init` |
-| `Cannot start: Safe range file ...` | `validation\ranges.json` is missing or has a mistake; the message says which |
+| `Cannot start: Safe range file ...` | `validation\ranges.json` is missing or has a mistake; the message says which. `git restore validation\ranges.json` puts it back |
+| `WARNING: safety limits ... are PLACEHOLDERS` | Expected until COSMIIC confirms the limits (see section 7) |
+| `No module named validation` / `files` | Run the command from the project folder, not from inside a subfolder |
 | `No module named PySide6` or `pytest` | Activate the venv (`.venv\Scripts\activate`), then `pip install -r requirements.txt` |
+| `unrecognized arguments: --fake-channels` (or `--ranges`) | You're on an older branch: `git checkout main` and `git pull` |
 | `python` not recognized | Use `py` instead, or install Python from python.org and tick "Add to PATH" |
 | `Could not connect in simulated mode` | You don't have .NET / the DLLs. Use `--fake` |
 | `git push` rejected ("fetch first") | `git pull`, then push again |
