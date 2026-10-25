@@ -28,6 +28,9 @@ from PySide6.QtWidgets import (
 
 from comms import AdapterStatus, CommunicationAdapter, ConnectionState
 
+from .serial_ports import list_serial_ports
+from .wss_status_bar import WssStatusBar
+
 #: Fixed values for the test pulse. Deliberately low.
 #: TODO(Sprint 2): confirm these and their units against the COSMIIC safe
 #: ranges (validation/ranges.json) before running on a person.
@@ -40,15 +43,6 @@ TEST_IPI = 50
 CONNECTION_CHECK_MS = 1000
 
 AUTO_DETECT = "Auto-detect"
-
-
-def list_serial_ports() -> list[str]:
-    """Names of the serial ports on this computer, e.g. ['COM3', 'COM4']."""
-    try:
-        from PySide6.QtSerialPort import QSerialPortInfo
-    except ImportError:  # some minimal PySide6 builds leave QtSerialPort out
-        return []
-    return sorted(info.portName() for info in QSerialPortInfo.availablePorts())
 
 
 class _StatusBridge(QObject):
@@ -175,6 +169,10 @@ class TestPulseWindow(QMainWindow):
         outer.addWidget(self.log_view, 1)
 
         self.setCentralWidget(root)
+
+        # WSS status bar (Sprint 2), the same widget the main window will use.
+        self.wss_status_bar = WssStatusBar(self.adapter, port_lister=self._port_lister)
+        self.setStatusBar(self.wss_status_bar)
         self.setStyleSheet(
             """
             #modeLabel { padding: 6px 10px; border-radius: 4px; font-weight: bold;
@@ -281,6 +279,7 @@ class TestPulseWindow(QMainWindow):
 
     def closeEvent(self, event) -> None:  # noqa: N802 (Qt name)
         self._timer.stop()
+        self.wss_status_bar.stop()
         if self.adapter.is_connected:
             try:
                 self.adapter.disconnect()  # stops stimulation first

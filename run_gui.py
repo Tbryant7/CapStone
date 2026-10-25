@@ -41,6 +41,7 @@ def main(argv: list[str] | None = None) -> int:
         adapter = create_adapter(
             mode, app_config, base_dir=ROOT,
             fake_disconnect_after_commands=args.fake_disconnect_after,
+            fake_channel_count=args.fake_channels,
         )
     except Exception as ex:
         print(f"Could not set up {mode} mode: {str(ex).splitlines()[0]}")

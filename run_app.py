@@ -58,6 +58,7 @@ def main(argv: list[str] | None = None) -> int:
     adapter = create_adapter(
         mode, app_config, base_dir=ROOT,
         fake_disconnect_after_commands=args.fake_disconnect_after,
+            fake_channel_count=args.fake_channels,
     )
     adapter.add_status_listener(
         lambda s: print(f"  [status] {s.state.value}, stimulating={s.stimulating} {s.detail}")
