@@ -11,6 +11,9 @@ import threading
 
 from .base import CommunicationAdapter
 
+#: Channels the fake WSS reports unless told otherwise.
+DEFAULT_FAKE_CHANNELS = 4
+
 
 class FakeCommunicationAdapter(CommunicationAdapter):
     """Accepts the same commands as the real adapter, logs them and sends nothing.
@@ -31,8 +34,11 @@ class FakeCommunicationAdapter(CommunicationAdapter):
         self,
         disconnect_after_commands: int | None = None,
         disconnect_after_seconds: float | None = None,
+        channel_count: int = DEFAULT_FAKE_CHANNELS,
     ) -> None:
         super().__init__()
+        #: How many channels this pretend WSS reports (``--fake-channels``).
+        self.reported_channels = channel_count
         self._disconnect_after_commands = disconnect_after_commands
         self._disconnect_after_seconds = disconnect_after_seconds
         self._commands_sent = 0
@@ -72,6 +78,9 @@ class FakeCommunicationAdapter(CommunicationAdapter):
     def _on_simulated_disconnect(self) -> None:
         self._cancel_timer()
         self.channel_outputs.clear()
+
+    def _channel_count(self) -> int | None:
+        return self.reported_channels
 
     def _status_detail(self) -> str:
         return f"{self._commands_sent} commands accepted"

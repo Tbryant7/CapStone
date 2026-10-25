@@ -73,6 +73,21 @@ docs/        notes and help content
 tests/       automated tests
 ```
 
+## WSS status bar (Sprint 2)
+
+`ui/wss_status_bar.py` is a status bar for any window:
+`window.setStatusBar(WssStatusBar(adapter))`. It shows, in words, whether the
+WSS is connected, not connected or lost, and the channel count the device
+reports (`adapter.channel_count()`, not a hard-coded 4). It shows a
+SIMULATED label in fake and simulated modes. It updates on every connection
+change and re-checks every 2 seconds, so an unplugged WSS shows within a few
+seconds. It's in the Test Pulse Window now and will move to the main window
+once that exists. Try `python run_gui.py --fake --fake-channels 6`.
+
+On the real WSS the channel count comes from asking the device which
+channels are valid (`IsFingerValid("ch1")`, `"ch2"`, ...). This hasn't been
+checked on hardware yet.
+
 ## Safety limits and validation (Sprint 2)
 
 All safety limits live in `validation/ranges.json`: the min and max for pulse

@@ -205,6 +205,22 @@ class CommunicationAdapter:
             self._set_state(ConnectionState.LOST, reason)
         return self.is_connected
 
+    def channel_count(self) -> int | None:
+        """How many channels the connected WSS reports.
+
+        Returns ``None`` when not connected or when the device cannot say.
+        This is a query, not a command, so it is not written to the command
+        log (the status bar asks every couple of seconds).
+        """
+        if not self.is_connected:
+            return None
+        try:
+            count = self._channel_count()
+        except Exception as ex:
+            logger.warning("[%s] channel count unavailable: %s", self.mode, ex)
+            return None
+        return count if isinstance(count, int) and count >= 0 else None
+
     @property
     def stimulating(self) -> bool:
         return self._stimulating
@@ -271,6 +287,10 @@ class CommunicationAdapter:
     def _is_alive(self) -> bool:
         """Optional: return False if the device has gone away. Default: alive."""
         return True
+
+    def _channel_count(self) -> int | None:
+        """Optional: number of channels the device reports. Default: unknown."""
+        return None
 
     def _on_simulated_disconnect(self) -> None:
         """Optional: backend-specific work when a fake disconnect happens."""

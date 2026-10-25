@@ -52,6 +52,7 @@ quick and picks up any new packages someone added.
 | Command | What it does |
 |---|---|
 | `python run_gui.py --fake` | Open the window with the fake WSS. No hardware or .NET needed. **Use this one on your laptop.** |
+| `python run_gui.py --fake --fake-channels 6` | Fake WSS that reports 6 channels (shown in the status bar) |
 | `python run_gui.py --fake --fake-disconnect-after 3` | Fake WSS that drops the connection by itself after 3 commands |
 | `python run_gui.py --simulated` | Wrapper's built-in test transport (needs .NET, the DLLs and the wrapper submodule) |
 | `python run_gui.py` | Uses the mode in `config\app_config.json` (currently `fake`) |
@@ -60,6 +61,8 @@ quick and picks up any new packages someone added.
 
 In the window: **Connect**, then **Send Test Pulse**, then **STOP**.
 **Simulate disconnect** tests the "Connection lost" state.
+The status bar at the bottom always shows the WSS connection, the channel
+count the device reports, and a SIMULATED label when no real WSS is used.
 
 ## 4. Run the fake WSS in the terminal (no window)
 

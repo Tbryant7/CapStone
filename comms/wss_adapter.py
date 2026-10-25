@@ -24,6 +24,9 @@ from typing import Any
 
 from .base import CommunicationAdapter, ConnectionLostError, logger
 
+#: Upper bound when counting channels, so a misbehaving device can't loop forever.
+MAX_CHANNEL_PROBE = 64
+
 
 def _import_wrapper(wrapper_src: Path | None):
     """Import ``wss_py_wrapper``, optionally from a submodule checkout."""
@@ -137,6 +140,18 @@ class WssCommunicationAdapter(CommunicationAdapter):
         # Ready/Started states when the serial link fails.
         ctrl = self._controller
         return ctrl is not None and bool(ctrl.Ready() or ctrl.Started())
+
+    def _channel_count(self) -> int | None:
+        # The wrapper has no "how many channels" call. It can say whether a
+        # given channel exists in the device's configuration, so count up
+        # from ch1 until one is not valid. Not yet confirmed on the real WSS.
+        ctrl = self._controller
+        if ctrl is None or not hasattr(ctrl, "IsFingerValid"):
+            return None
+        count = 0
+        while count < MAX_CHANNEL_PROBE and ctrl.IsFingerValid(f"ch{count + 1}"):
+            count += 1
+        return count
 
     def _on_simulated_disconnect(self) -> None:
         # The C# TestModeTransport cannot be told to drop the link from

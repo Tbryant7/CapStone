@@ -25,7 +25,7 @@ from pathlib import Path
 from typing import Any
 
 from .base import CommunicationAdapter
-from .fake_adapter import FakeCommunicationAdapter
+from .fake_adapter import DEFAULT_FAKE_CHANNELS, FakeCommunicationAdapter
 
 MODES = ("hardware", "simulated", "fake")
 DEFAULT_MODE = "hardware"
@@ -42,6 +42,8 @@ def add_mode_arguments(parser: argparse.ArgumentParser) -> None:
                        help="Shortcut for --comm-mode fake (pure Python, no .NET needed).")
     parser.add_argument("--fake-disconnect-after", type=int, metavar="N",
                         help="Fake mode: drop the connection after N commands.")
+    parser.add_argument("--fake-channels", type=int, metavar="N",
+                        help="Fake mode: how many channels the pretend WSS reports (default 4).")
 
 
 def load_app_config(path: Path | None) -> dict[str, Any]:
@@ -68,8 +70,8 @@ def create_adapter(
     """Build the adapter for ``mode``.
 
     ``app_config["communication"]`` can hold ``config_dir``, ``cs_lib_dir``,
-    ``wrapper_src``, ``serial_port``, ``log_dir`` and
-    ``fake_disconnect_after_commands``. Relative paths are resolved against
+    ``wrapper_src``, ``serial_port``, ``log_dir``,
+    ``fake_disconnect_after_commands`` and ``fake_channel_count``. Relative paths are resolved against
     ``base_dir``. Keyword ``overrides`` win over the config.
     """
     comm = dict((app_config or {}).get("communication", {}))
@@ -87,6 +89,7 @@ def create_adapter(
         return FakeCommunicationAdapter(
             disconnect_after_commands=comm.get("fake_disconnect_after_commands"),
             disconnect_after_seconds=comm.get("fake_disconnect_after_seconds"),
+            channel_count=comm.get("fake_channel_count", DEFAULT_FAKE_CHANNELS),
         )
 
     from .wss_adapter import WssCommunicationAdapter  # imports pythonnet lazily
