@@ -15,6 +15,7 @@ import argparse
 import sys
 from pathlib import Path
 
+from validation import DEFAULT_RANGES_PATH, load_or_exit_message
 from comms import (
     ConnectionLostError,
     add_mode_arguments,
@@ -40,8 +41,17 @@ HELP = """Commands:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="COSMIIC WSS app")
     parser.add_argument("--app-config", type=Path, default=ROOT / "config" / "app_config.json")
+    parser.add_argument("--ranges", type=Path, default=DEFAULT_RANGES_PATH,
+                        help="Safe range limits file (default: validation/ranges.json).")
     add_mode_arguments(parser)
     args = parser.parse_args(argv)
+
+    # Never start without valid safety limits (Safe range config card).
+    ranges, message = load_or_exit_message(args.ranges)
+    if message:
+        print(message)
+    if ranges is None:
+        return 1
 
     app_config = load_app_config(args.app_config)
     mode = resolve_mode(args.comm_mode, app_config)

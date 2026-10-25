@@ -1,0 +1,10 @@
+{
+  "format_version": 1,
+  "name": "Unsafe amplitude (demo)",
+  "description": "Channel 2 amplitude is far above the limit. Must FAIL validation.",
+  "time_step_ms": 50,
+  "channels": [
+    {"channel": 1, "pulse_width_us": 50, "amplitude_ma": 1.0, "frequency_hz": 20},
+    {"channel": 2, "pulse_width_us": 50, "amplitude_ma": 40.0, "frequency_hz": 20}
+  ]
+}

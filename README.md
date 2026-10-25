@@ -68,9 +68,37 @@ timeseries/  time-varying stimulation patterns
 validation/  RangeTable and ValidationEngine
 channels/    multi-channel manager
 comms/       CommunicationAdapter: the only code that talks to the WSS
+samples/     sample program files (two valid, one unsafe for the demo)
 docs/        notes and help content
 tests/       automated tests
 ```
+
+## Safety limits and validation (Sprint 2)
+
+All safety limits live in `validation/ranges.json`: the min and max for pulse
+width (µs), amplitude (mA), frequency (Hz) and time step (ms). The app will
+not start if that file is missing or broken.
+
+**The numbers in it now are placeholders, not COSMIIC limits.** The file says
+so (`"confirmed": false`), and the app prints a warning at startup until it
+is changed. When COSMIIC confirms the limits, edit the numbers, write where
+they came from in `"source"`, and set `"confirmed": true`. No code changes
+are needed.
+
+`ValidationEngine` (in `validation/`) checks a program against those limits
+and returns `is_valid` plus plain-language messages such as
+"Channel 2 amplitude 40 mA is above the 3 mA limit." Every path that loads or
+saves a program must call it (REQ-16, REQ-17):
+
+```python
+from validation import ValidationEngine
+result = ValidationEngine().validate(program)
+if not result.is_valid:
+    show(result.failed_parameters)   # don't save or run it
+```
+
+A program is the `Program` / `Channel` data classes in `files/program.py`,
+which ProgramFileManager saves and loads as JSON. See `samples/` for the format.
 
 ## Working as a team
 
