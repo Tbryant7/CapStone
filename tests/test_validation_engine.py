@@ -216,3 +216,40 @@ def test_unsafe_sample_fails_with_clear_message():
 def test_sample_channel_counts():
     assert len(_load_sample("valid_1_channel.json").channels) == 1
     assert len(_load_sample("valid_4_channel.json").channels) == 4
+
+
+# ------------------------------------------ terminal command (python -m validation)
+
+
+def test_command_line_reports_pass_and_fail(capsys):
+    from validation.__main__ import main
+
+    code = main([str(SAMPLES / "valid_4_channel.json"), str(SAMPLES / "unsafe_amplitude.json")])
+    out = capsys.readouterr().out
+    assert code == 1
+    assert "valid_4_channel.json (Four channel test): PASSED" in out
+    assert "unsafe_amplitude.json (Unsafe amplitude (demo)): FAILED" in out
+    assert "Channel 2 amplitude 40 mA is above the" in out
+
+
+def test_command_line_all_valid_exits_zero(capsys):
+    from validation.__main__ import main
+
+    assert main([str(SAMPLES / "valid_1_channel.json")]) == 0
+
+
+def test_command_line_unreadable_file(tmp_path, capsys):
+    from validation.__main__ import main
+
+    broken = tmp_path / "broken.json"
+    broken.write_text("{ not json", encoding="utf-8")
+    assert main([str(broken), str(tmp_path / "missing.json")]) == 1
+    out = capsys.readouterr().out
+    assert out.count("COULD NOT READ") == 2
+
+
+def test_command_line_refuses_missing_ranges(tmp_path, capsys):
+    from validation.__main__ import main
+
+    assert main([str(SAMPLES / "valid_1_channel.json"), "--ranges", str(tmp_path / "x.json")]) == 1
+    assert "Cannot start" in capsys.readouterr().out
