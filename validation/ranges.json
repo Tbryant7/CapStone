@@ -1,0 +1,30 @@
+{
+  "source": "PLACEHOLDER limits chosen by the team, NOT confirmed by COSMIIC. Replace every min/max with the values COSMIIC confirms, write where they came from here, and set confirmed to true.",
+  "confirmed": false,
+  "parameters": {
+    "pulse_width": {
+      "label": "pulse width",
+      "unit": "µs",
+      "min": 20,
+      "max": 100
+    },
+    "amplitude": {
+      "label": "amplitude",
+      "unit": "mA",
+      "min": 0,
+      "max": 3
+    },
+    "frequency": {
+      "label": "frequency",
+      "unit": "Hz",
+      "min": 1,
+      "max": 50
+    },
+    "time_step": {
+      "label": "time step",
+      "unit": "ms",
+      "min": 10,
+      "max": 1000
+    }
+  }
+}

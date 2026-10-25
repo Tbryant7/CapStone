@@ -109,6 +109,22 @@ set `"mode": "fake"` in `config\app_config.json`. It's already set that way.
 
 ---
 
+## 5b. Change the safety limits
+
+Open the limits file, edit the min/max numbers, and save:
+
+```
+code validation\ranges.json
+```
+
+The app won't start if the file is missing or broken, and prints a
+PLACEHOLDER warning until `"confirmed"` is set to `true`. To check a
+different limits file without editing the real one:
+
+```
+python run_gui.py --fake --ranges path\to\other_ranges.json
+```
+
 ## 6. Run the tests
 
 | Command | What it does |
@@ -117,6 +133,7 @@ set `"mode": "fake"` in `config\app_config.json`. It's already set that way.
 | `python -m pytest -v` | Same, listing each test by name |
 | `python -m pytest tests\test_pulse_window_gui.py` | Only the window tests |
 | `python -m pytest -k disconnect` | Only tests with "disconnect" in the name |
+| `python -m pytest tests\test_validation_engine.py` | Only the ValidationEngine tests |
 | `python -m pytest -rs` | Also say why skipped tests were skipped |
 
 If 6 tests are skipped, the wrapper submodule is missing: run
@@ -177,6 +194,7 @@ code .
 | Problem | Fix |
 |---|---|
 | `external\wss-py-wrapper` is empty | `git submodule update --init` |
+| `Cannot start: Safe range file ...` | `validation\ranges.json` is missing or has a mistake; the message says which |
 | `No module named PySide6` or `pytest` | Activate the venv (`.venv\Scripts\activate`), then `pip install -r requirements.txt` |
 | `python` not recognized | Use `py` instead, or install Python from python.org and tick "Add to PATH" |
 | `Could not connect in simulated mode` | You don't have .NET / the DLLs. Use `--fake` |

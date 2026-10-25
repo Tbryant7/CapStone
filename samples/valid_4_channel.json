@@ -1,0 +1,12 @@
+{
+  "format_version": 1,
+  "name": "Four channel test",
+  "description": "All four channels inside the safe ranges. Should pass validation.",
+  "time_step_ms": 50,
+  "channels": [
+    {"channel": 1, "pulse_width_us": 50, "amplitude_ma": 1.0, "frequency_hz": 20},
+    {"channel": 2, "pulse_width_us": 60, "amplitude_ma": 1.5, "frequency_hz": 25},
+    {"channel": 3, "pulse_width_us": 40, "amplitude_ma": 0.5, "frequency_hz": 20},
+    {"channel": 4, "pulse_width_us": 80, "amplitude_ma": 2.0, "frequency_hz": 30}
+  ]
+}
