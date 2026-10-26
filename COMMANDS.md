@@ -389,6 +389,8 @@ code .
 | Problem | Fix |
 |---|---|
 | `external\wss-py-wrapper` is empty | `git submodule update --init` |
+| `git pull` says local changes to `config/recent_programs.json` would be overwritten | `git restore config\recent_programs.json`, then `git pull` again (one time only; the file is no longer tracked) |
+| Recent Stimulation Programs list is empty | Normal on a new laptop or after the update above: the list is kept per person and fills up as you open programs |
 | `Cannot start: Safe range file ...` | `validation\ranges.json` is missing or has a mistake; the message says which. `git restore validation\ranges.json` puts it back |
 | `WARNING: safety limits ... are PLACEHOLDERS` | Expected until COSMIIC confirms the limits (see section 7) |
 | `No module named validation` / `files` | Run the command from the project folder, not from inside a subfolder |
