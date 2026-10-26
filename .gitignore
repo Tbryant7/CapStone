@@ -14,3 +14,6 @@ Thumbs.db
 
 # Runtime logs written by run_app.py
 logs/
+
+# Each person's own recent programs list (written by the Main Menu)
+config/recent_programs.json

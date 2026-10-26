@@ -148,6 +148,11 @@ channel's pulse width, amplitude and frequency, and the validation result,
 what it was showing. The panel (`ui/program_panel.py`) is a placeholder
 until the Beginner Editor arrives in Sprint 3.
 
+The Recent Stimulation Programs list is saved in
+`config/recent_programs.json`. That file is per person and is not in Git
+(it's in `.gitignore`), so everyone keeps their own list and opening a
+program never shows up as a change in `git status`.
+
 ## Working as a team
 
 `main` is protected: make a branch, push it, and open a pull request.
