@@ -21,24 +21,30 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from files import ProgramFileError, ProgramFileManager
+from ui.program_panel import ProgramPanel
+
 RECENT_PROGRAMS_FILE = (
     Path(__file__).resolve().parent.parent / "config" / "recent_programs.json"
 )
 
 STYLE_FILE = Path(__file__).resolve().parent / "main_menu.qss"
 
+SAMPLES_FOLDER = Path(__file__).resolve().parent.parent / "samples"
+
 
 class MainMenuWindow(QMainWindow):
     """Screen 1 main menu based on SDS Figure 4.2."""
 
-    def __init__(self) -> None:
+    def __init__(self, file_manager: ProgramFileManager | None = None) -> None:
         super().__init__()
 
         self.setWindowTitle("COSMIIC - Main Menu")
-        self.setMinimumSize(900, 600)
-        self.resize(900, 600)
+        self.setMinimumSize(900, 760)
+        self.resize(960, 800)
 
         self._recent_programs = []
+        self.file_manager = file_manager or ProgramFileManager()
 
         self._build()
         self._load_recent_programs()
@@ -155,6 +161,11 @@ class MainMenuWindow(QMainWindow):
 
         content_layout.addLayout(right_panel, 2)
         body_layout.addLayout(content_layout, 1)
+
+        # Read-only view of the opened program (until the Beginner Editor)
+        self.program_panel = ProgramPanel(self.file_manager.engine.ranges)
+        body_layout.addWidget(self.program_panel, 1)
+
         layout.addWidget(body, 1)
 
         # Bottom device status
@@ -330,20 +341,52 @@ class MainMenuWindow(QMainWindow):
         file_path, _ = QFileDialog.getOpenFileName(
             self,
             "Import Program / MATLAB File",
-            "",
+            str(SAMPLES_FOLDER) if SAMPLES_FOLDER.is_dir() else "",
             "Program Files (*.json *.mat);;JSON Files (*.json);;MATLAB Files (*.mat)",
         )
 
         if not file_path:
             return
 
-        QMessageBox.information(
-            self,
-            "Program Selected",
-            f"Selected file: {Path(file_path).name}\n\n"
-            "Program loading will be available after "
-            "ProgramFileManager integration.",
+        if Path(file_path).suffix.lower() == ".mat":
+            QMessageBox.information(
+                self,
+                "Coming soon",
+                "MATLAB import is not available yet. Choose a .json program file.",
+            )
+            return
+
+        self.open_program_file(file_path)
+
+    def open_program_file(self, file_path: str | Path) -> bool:
+        """Load a program file and show it in the Opened Program panel.
+
+        A damaged or incomplete file shows an error and changes nothing:
+        whatever program was shown before stays on screen.
+        """
+        try:
+            opened = self.file_manager.open(file_path)
+        except ProgramFileError as ex:
+            QMessageBox.warning(self, "Could not open program", str(ex))
+            return False
+
+        self.program_panel.show_program(opened)
+
+        previous = next(
+            (
+                program
+                for program in self._recent_programs
+                if program.get("name") == opened.program.name
+            ),
+            {},
         )
+        self._save_recent_program(
+            opened.program.name,
+            opened.program.description or "No description",
+            previous.get("last_run", "Not run yet"),
+            str(Path(file_path).resolve()),
+        )
+        return True
 
     def _open_selected_program(self) -> None:
         """Handle opening a selected recent program."""
@@ -357,9 +400,15 @@ class MainMenuWindow(QMainWindow):
             )
             return
 
-        QMessageBox.information(
-            self,
-            "Program Opening",
-            "Program loading will be connected "
-            "when ProgramFileManager is ready.",
-        )
+        file_path = self._recent_programs[row].get("file_path", "")
+
+        if not file_path:
+            QMessageBox.information(
+                self,
+                "No File",
+                "This recent program has no file saved with it. "
+                "Use Import Program to open it.",
+            )
+            return
+
+        self.open_program_file(file_path)

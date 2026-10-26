@@ -3,6 +3,12 @@ QMainWindow {
     background-color: #ffffff;
 }
 
+/* Dark text everywhere: without this, Windows dark mode draws white text
+   on these light backgrounds. */
+QMainWindow QWidget {
+    color: #222222;
+}
+
 #mainHeader {
     background-color: #2e4055;
     color: white;
@@ -88,4 +94,25 @@ QPushButton#openSelectedButton {
 QPushButton#helpButton {
     background-color: #fff0d3;
     border: 2px solid #c99b16;
+}
+
+/* Opened Program panel (ui/program_panel.py) */
+QTableWidget#channelTable {
+    background-color: #ffffff;
+    alternate-background-color: #f4f7fa;
+    color: #222222;
+    gridline-color: #cccccc;
+    border: 1px solid #888888;
+}
+
+QTableWidget#channelTable QHeaderView::section {
+    background-color: #e5edf5;
+    color: #222222;
+    border: 1px solid #b8c6d4;
+    padding: 4px;
+    font-weight: bold;
+}
+
+#programName {
+    font-size: 15px;
 }
