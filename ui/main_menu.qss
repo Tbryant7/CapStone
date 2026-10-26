@@ -1,0 +1,118 @@
+
+QMainWindow {
+    background-color: #ffffff;
+}
+
+/* Dark text everywhere: without this, Windows dark mode draws white text
+   on these light backgrounds. */
+QMainWindow QWidget {
+    color: #222222;
+}
+
+#mainHeader {
+    background-color: #2e4055;
+    color: white;
+    font-size: 20px;
+    font-weight: bold;
+}
+
+QGroupBox {
+    background-color: #fafafa;
+    border: 2px solid #888888;
+    border-radius: 0px;
+    margin-top: 12px;
+    padding: 6px;
+    font-weight: bold;
+}
+
+QGroupBox::title {
+    subcontrol-origin: margin;
+    left: 8px;
+    padding: 0 4px;
+}
+
+QListWidget {
+    background-color: #fafafa;
+    border: 1px solid #888888;
+    border-radius: 0px;
+    padding: 6px;
+    outline: none;
+}
+
+QListWidget::item {
+    background-color: #ffffff;
+    border: 2px solid #888888;
+    border-radius: 0px;
+    padding: 5px;
+    margin-bottom: 5px;
+    color: #333333;
+}
+
+QListWidget::item:selected {
+    background-color: #e5edf5;
+    border: 2px solid #6485a5;
+    color: #222222;
+}
+
+QPushButton {
+    background-color: #f5f5f5;
+    border: 2px solid #888888;
+    border-radius: 4px;
+    padding: 4px;
+    font-size: 13px;
+}
+
+QPushButton:hover {
+    background-color: #e5edf5;
+}
+
+QPushButton:checked {
+    background-color: #dce9f6;
+    border: 2px solid #4d83b7;
+    color: #333333;
+    font-weight: normal;
+}
+
+#deviceStatus {
+    background-color: #e8f2e6;
+    color: #444444;
+    border: 2px solid #5a963f;
+    font-weight: normal;
+}
+
+QPushButton#newProgramButton,
+QPushButton#importProgramButton {
+    background-color: #dce9f6;
+    border: 2px solid #4d83b7;
+}
+
+QPushButton#openSelectedButton {
+    background-color: #e2efdc;
+    border: 2px solid #5a963f;
+}
+
+QPushButton#helpButton {
+    background-color: #fff0d3;
+    border: 2px solid #c99b16;
+}
+
+/* Opened Program panel (ui/program_panel.py) */
+QTableWidget#channelTable {
+    background-color: #ffffff;
+    alternate-background-color: #f4f7fa;
+    color: #222222;
+    gridline-color: #cccccc;
+    border: 1px solid #888888;
+}
+
+QTableWidget#channelTable QHeaderView::section {
+    background-color: #e5edf5;
+    color: #222222;
+    border: 1px solid #b8c6d4;
+    padding: 4px;
+    font-weight: bold;
+}
+
+#programName {
+    font-size: 15px;
+}

@@ -193,6 +193,33 @@ Click **Connect**, then **Send Test Pulse** once. That click sends two
 commands (start, then the pulse), so the fake WSS drops right after it and
 the bar switches to "Connection lost" by itself.
 
+### Sprint 2: Open a program on the Main Menu
+
+```
+python run_menu.py
+```
+
+1. **Import Program / MATLAB File**: the picker opens in `samples\`.
+   Choose `valid_1_channel.json`: the Opened Program panel shows 1 channel
+   and "Validation: Passed".
+2. Import `valid_4_channel.json`: 4 channels, "Passed".
+3. Import `unsafe_amplitude.json`: "Validation: Failed (1 problem)", the line
+   "Channel 2 amplitude 40 mA is above the 3 mA limit.", and the 40 cell
+   marked "out of range" in red.
+4. Import `damaged\missing_amplitude.json` (or `damaged\truncated.json`): an
+   error says what's wrong, and the panel still shows the previous program
+   (nothing half-loaded).
+5. Click a program in **Recent Stimulation Programs**, then **Open Selected**:
+   it opens again.
+
+Shortcut: `python run_menu.py samples\unsafe_amplitude.json` opens it at start.
+
+Then show the tests (round trip save/load, damaged files, the panel):
+
+```
+python -m pytest tests\test_program_file_manager.py tests\test_program_panel.py -v
+```
+
 ---
 
 ## 4. Test Pulse Window options

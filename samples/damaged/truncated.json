@@ -1,0 +1,8 @@
+{
+  "format_version": 1,
+  "name": "Cut off mid-save (demo)",
+  "description": "This file stops halfway through. Must refuse to open.",
+  "time_step_ms": 50,
+  "channels": [
+    {"channel": 1, "pulse_width_us": 50, "amplitude_ma": 1.0, "frequency_hz": 20},
+    {"channel": 2, "pulse_wid

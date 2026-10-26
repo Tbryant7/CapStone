@@ -115,6 +115,39 @@ if not result.is_valid:
 A program is the `Program` / `Channel` data classes in `files/program.py`,
 which ProgramFileManager saves and loads as JSON. See `samples/` for the format.
 
+## ProgramFileManager (Sprint 2)
+
+```python
+from files import ProgramFileManager, ProgramFileError
+manager = ProgramFileManager()
+manager.save(program, "my_program.json")   # refuses a program that fails validation
+program = manager.load("my_program.json")  # ProgramFileError if damaged or incomplete
+opened = manager.open("my_program.json")   # opened.program + opened.validation
+```
+
+Loading is all or nothing: the whole file is checked first, and a damaged
+(not valid JSON, cut off) or incomplete (a missing or empty field) file
+raises `ProgramFileError` with a plain-language reason. Nothing is
+half-loaded. A complete file with unsafe values still opens, so the screen
+can show why it fails. Saving writes to a temporary file first, so a failed
+save never damages the old file. `samples/damaged/` has two broken files for
+the demo.
+
+## Opened Program panel (Sprint 2)
+
+```bash
+python run_menu.py                                 # Main Menu
+python run_menu.py samples/unsafe_amplitude.json   # open a program straight away
+```
+
+**Import Program** (or **Open Selected** on a recent program) opens a program
+file and shows it, read-only, at the bottom of the Main Menu: its name, each
+channel's pulse width, amplitude and frequency, and the validation result,
+"Passed" or each failing value in words. Out-of-range cells are also marked
+"out of range" in red. A damaged file shows an error and the panel keeps
+what it was showing. The panel (`ui/program_panel.py`) is a placeholder
+until the Beginner Editor arrives in Sprint 3.
+
 ## Working as a team
 
 `main` is protected: make a branch, push it, and open a pull request.
