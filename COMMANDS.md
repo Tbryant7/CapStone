@@ -127,9 +127,12 @@ Show that the app **refuses to start** without a valid limits file:
 
 ```
 python run_gui.py --fake --ranges missing.json
+python run_menu.py --ranges missing.json
 ```
 
-Expected: `Cannot start: Safe range file not found: missing.json` and no window.
+Expected, for both: `Cannot start: Safe range file not found: missing.json`
+and no window. Every way of starting the app (Test Pulse Window, Main Menu,
+terminal app) checks the limits file first.
 
 ### Sprint 2: ValidationEngine
 
@@ -157,6 +160,18 @@ the command above (now everything passes), then put it back:
 ```
 git restore validation\ranges.json
 ```
+
+Now show the same check inside the app. The Main Menu runs every program
+it opens through the ValidationEngine:
+
+```
+python run_menu.py samples\unsafe_amplitude.json
+```
+
+The Opened Program panel at the bottom shows "Validation: Failed (1 problem)",
+the message "Channel 2 amplitude 40 mA is above the 3 mA limit.", and the 40
+cell marked "out of range" in red. Then click **Import Program / MATLAB File**
+and choose `valid_4_channel.json`: "Validation: Passed". Close the window.
 
 Then show the automated tests (values at, just under and just over every
 limit, empty program, missing values):
