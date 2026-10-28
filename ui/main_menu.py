@@ -342,18 +342,11 @@ class MainMenuWindow(QMainWindow):
             self,
             "Import Program / MATLAB File",
             str(SAMPLES_FOLDER) if SAMPLES_FOLDER.is_dir() else "",
-            "Program Files (*.json *.mat);;JSON Files (*.json);;MATLAB Files (*.mat)",
+            "Program Files (*.json *.mat *.csv);;JSON Files (*.json);;"
+            "MATLAB Files (*.mat);;CSV Files (*.csv)",
         )
 
         if not file_path:
-            return
-
-        if Path(file_path).suffix.lower() == ".mat":
-            QMessageBox.information(
-                self,
-                "Coming soon",
-                "MATLAB import is not available yet. Choose a .json program file.",
-            )
             return
 
         self.open_program_file(file_path)

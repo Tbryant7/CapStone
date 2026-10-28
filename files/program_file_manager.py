@@ -135,9 +135,19 @@ class ProgramFileManager:
         return Program.from_dict(data)
 
     def open(self, path: Path | str) -> OpenedProgram:
-        """Load ``path`` and validate it. Raises :class:`ProgramFileError`."""
-        program = self.load(path)
-        return OpenedProgram(program, self.engine.validate(program), Path(path))
+        """Load ``path`` and validate it. Raises :class:`ProgramFileError`.
+
+        ``.mat`` and ``.csv`` files are imported as time-series data
+        (``files/matlab_import.py``, REQ-15) and validated the same way.
+        """
+        path = Path(path)
+        if path.suffix.lower() in (".mat", ".csv"):
+            from .matlab_import import import_time_series
+
+            program = import_time_series(path)
+        else:
+            program = self.load(path)
+        return OpenedProgram(program, self.engine.validate(program), path)
 
 
 def check_program_data(data: Any) -> list[str]:
@@ -179,7 +189,36 @@ def check_program_data(data: Any) -> list[str]:
                 continue
             for key, label in CHANNEL_FIELDS:
                 _check_number(entry, key, f"Channel entry {index} {label}", problems)
+            _check_time_series(entry, index, problems)
     return problems
+
+
+#: Fields every time-series point must have: (JSON key, label in messages).
+POINT_FIELDS = (
+    ("time_s", "time"),
+    ("pulse_width_us", "pulse width"),
+    ("amplitude_ma", "amplitude"),
+)
+
+
+def _check_time_series(entry: dict, index: int, problems: list[str]) -> None:
+    """``time_series`` is optional; when present every point must be complete."""
+    points = entry.get("time_series")
+    if points is None:
+        return
+    if not isinstance(points, list):
+        problems.append(f'Channel entry {index} "time_series" must be a list.')
+        return
+    before = len(problems)
+    for number, point in enumerate(points, start=1):
+        if not isinstance(point, dict):
+            problems.append(f"Channel entry {index} time-series point {number} is not a point object.")
+        else:
+            for key, label in POINT_FIELDS:
+                _check_number(point, key, f"Channel entry {index} time-series point {number} {label}", problems)
+        if len(problems) - before >= 5:  # don't bury the user in thousands of lines
+            problems.append(f"Channel entry {index}: more time-series points have problems.")
+            return
 
 
 def _check_number(data: dict, key: str, what: str, problems: list[str]) -> None:

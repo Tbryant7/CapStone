@@ -9,6 +9,10 @@ Units are fixed by the field names and match the WSS wrapper:
 pulse width in microseconds, amplitude in milliamps, frequency in hertz,
 time step in milliseconds.
 
+A channel may also carry a time series (``"time_series"``: a list of
+``{"time_s", "pulse_width_us", "amplitude_ma"}`` points, ``time_step_ms``
+apart), e.g. from a MATLAB import (``files/matlab_import.py``).
+
 JSON shape (``to_dict`` / ``from_dict``)::
 
     {
@@ -31,27 +35,65 @@ FORMAT_VERSION = 1
 
 
 @dataclass
+class TimeSeriesPoint:
+    """One step of a time-varying channel (REQ-6, REQ-8).
+
+    ``time_s`` is seconds from the start of the program. The program's
+    ``time_step_ms`` is the fixed spacing between points (Vision Feature 2).
+    """
+
+    time_s: Any = None
+    pulse_width_us: Any = None
+    amplitude_ma: Any = None
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "time_s": self.time_s,
+            "pulse_width_us": self.pulse_width_us,
+            "amplitude_ma": self.amplitude_ma,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "TimeSeriesPoint":
+        return cls(
+            time_s=data.get("time_s"),
+            pulse_width_us=data.get("pulse_width_us"),
+            amplitude_ma=data.get("amplitude_ma"),
+        )
+
+
+@dataclass
 class Channel:
     number: Any = None
     pulse_width_us: Any = None
     amplitude_ma: Any = None
     frequency_hz: Any = None
+    #: Optional. Empty means the channel holds constant values. When present,
+    #: pulse_width_us / amplitude_ma above are the values at the first point.
+    time_series: list[TimeSeriesPoint] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        data = {
             "channel": self.number,
             "pulse_width_us": self.pulse_width_us,
             "amplitude_ma": self.amplitude_ma,
             "frequency_hz": self.frequency_hz,
         }
+        if self.time_series:  # constant channels keep the original, shorter format
+            data["time_series"] = [point.to_dict() for point in self.time_series]
+        return data
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "Channel":
+        raw = data.get("time_series") or []
+        if not isinstance(raw, list) or not all(isinstance(p, dict) for p in raw):
+            raise ValueError('"time_series" must be a list of point objects.')
         return cls(
             number=data.get("channel"),
             pulse_width_us=data.get("pulse_width_us"),
             amplitude_ma=data.get("amplitude_ma"),
             frequency_hz=data.get("frequency_hz"),
+            time_series=[TimeSeriesPoint.from_dict(p) for p in raw],
         )
 
 
