@@ -73,12 +73,6 @@ QPushButton:checked {
     font-weight: normal;
 }
 
-#deviceStatus {
-    background-color: #e8f2e6;
-    color: #444444;
-    border: 2px solid #5a963f;
-    font-weight: normal;
-}
 
 QPushButton#newProgramButton,
 QPushButton#importProgramButton {
