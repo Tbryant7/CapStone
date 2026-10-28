@@ -97,7 +97,75 @@ class ValidationEngine:
                 limit = self.ranges[parameter]
                 self._check_value(f"{name} {limit.label}", getattr(channel, attribute), limit, problems)
 
+            if channel.time_series:
+                self._check_time_series(name, channel.time_series, program.time_step_ms, problems)
+
         return ValidationResult(not problems, problems)
+
+    # ------------------------------------------------------- time series
+
+    def _check_time_series(self, name: str, points: list, time_step_ms: Any, problems: list[str]) -> None:
+        """REQ-6 - REQ-8, UC2-A2: every point in range, times in order and
+        exactly one time step apart. One summary line per kind of problem, so
+        a 100 000-point import can't produce 100 000 messages."""
+        for attribute, parameter in TIME_SERIES_PARAMETERS:
+            limit = self.ranges[parameter]
+            missing, not_numbers, low, high = [], [], [], []
+            for number, point in enumerate(points, start=1):
+                value = getattr(point, attribute)
+                if value is None:
+                    missing.append(number)
+                elif not _is_number(value):
+                    not_numbers.append(number)
+                elif value < limit.min:
+                    low.append(point)
+                elif value > limit.max:
+                    high.append(point)
+            what = f"{name} time-series {limit.label}"
+            if missing:
+                problems.append(f"{what} is missing at {_points(missing)} (first at point {missing[0]}).")
+            if not_numbers:
+                problems.append(f"{what} is not a number at {_points(not_numbers)} (first at point {not_numbers[0]}).")
+            if high:
+                worst = max(high, key=lambda p: getattr(p, attribute))
+                problems.append(
+                    f"{name} {limit.label} goes above the {_fmt(limit.max, limit)} limit at "
+                    f"{_points(high)} (highest {_fmt(getattr(worst, attribute), limit)} at "
+                    f"t = {_secs(worst.time_s)})."
+                )
+            if low:
+                worst = min(low, key=lambda p: getattr(p, attribute))
+                problems.append(
+                    f"{name} {limit.label} goes below the {_fmt(limit.min, limit)} minimum at "
+                    f"{_points(low)} (lowest {_fmt(getattr(worst, attribute), limit)} at "
+                    f"t = {_secs(worst.time_s)})."
+                )
+
+        times = [p.time_s for p in points]
+        bad = [n for n, t in enumerate(times, start=1) if not _is_number(t)]
+        if bad:
+            problems.append(f"{name} time-series time is missing or not a number at {_points(bad)} (first at point {bad[0]}).")
+            return
+        if times[0] < 0:
+            problems.append(f"{name} time series starts before 0 s (t = {_secs(times[0])}).")
+        for number in range(1, len(times)):
+            if times[number] <= times[number - 1]:
+                problems.append(
+                    f"{name} time-series times are out of order at point {number + 1} "
+                    f"(t = {_secs(times[number])} comes after t = {_secs(times[number - 1])})."
+                )
+                return
+        if _is_number(time_step_ms) and time_step_ms > 0:
+            step = time_step_ms / 1000.0
+            tolerance = max(1e-9, step * 1e-6)
+            for number in range(1, len(times)):
+                gap = times[number] - times[number - 1]
+                if abs(gap - step) > tolerance:
+                    problems.append(
+                        f"{name} time-series points are not one {_fmt_ms(time_step_ms)} time step "
+                        f"apart (gap of {_fmt_ms(gap * 1000)} before t = {_secs(times[number])})."
+                    )
+                    return
 
     # ------------------------------------------------------------ helpers
 
@@ -115,6 +183,25 @@ class ValidationEngine:
             problems.append(
                 f"{what} {_fmt(value, limit)} is above the {_fmt(limit.max, limit)} limit."
             )
+
+
+#: (attribute on TimeSeriesPoint, parameter name in the RangeTable)
+TIME_SERIES_PARAMETERS = (
+    ("pulse_width_us", "pulse_width"),
+    ("amplitude_ma", "amplitude"),
+)
+
+
+def _points(numbers: list) -> str:
+    return f"{len(numbers)} time-series point{'s' if len(numbers) != 1 else ''}"
+
+
+def _secs(value: Any) -> str:
+    return f"{value:g} s" if _is_number(value) else repr(value)
+
+
+def _fmt_ms(value: float) -> str:
+    return f"{round(value, 6):g} ms"
 
 
 def _is_number(value: Any) -> bool:

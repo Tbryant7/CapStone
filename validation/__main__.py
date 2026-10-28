@@ -2,6 +2,7 @@
 
     python -m validation samples/valid_4_channel.json samples/unsafe_amplitude.json
     python -m validation samples/*.json --ranges path/to/other_ranges.json
+    python -m validation samples/matlab/ramp_2ch.mat samples/matlab/ramp_2ch.csv
 
 Prints PASSED or FAILED for each file, with a plain-language line for every
 problem. Exits with code 1 if any file fails or can't be read.
@@ -14,6 +15,7 @@ import json
 import sys
 from pathlib import Path
 
+from files import IMPORT_SUFFIXES, ProgramFileError, import_time_series
 from files.program import Program
 
 from . import DEFAULT_RANGES_PATH, ValidationEngine, load_or_exit_message
@@ -46,8 +48,17 @@ def main(argv: list[str] | None = None) -> int:
     for path in args.files:
         print()
         try:
-            with open(path, encoding="utf-8") as handle:
-                program = Program.from_dict(json.load(handle))
+            if path.suffix.lower() in IMPORT_SUFFIXES:
+                program = import_time_series(path)  # MATLAB / CSV time series
+            else:
+                with open(path, encoding="utf-8") as handle:
+                    program = Program.from_dict(json.load(handle))
+        except ProgramFileError as ex:
+            print(f"{path}: COULD NOT IMPORT")
+            for line in str(ex).splitlines()[1:]:
+                print(f"  {line}")
+            all_ok = False
+            continue
         except (OSError, UnicodeDecodeError, json.JSONDecodeError, ValueError) as ex:
             print(f"{path}: COULD NOT READ - {ex}")
             all_ok = False

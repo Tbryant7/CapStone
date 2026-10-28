@@ -153,6 +153,16 @@ The Recent Stimulation Programs list is saved in
 (it's in `.gitignore`), so everyone keeps their own list and opening a
 program never shows up as a change in `git status`.
 
+## MATLAB / CSV import (REQ-15)
+
+**Import Program / MATLAB File** on the Main Menu also opens `.mat` and
+`.csv` time-series files. Each channel gets a time series of pulse width and
+amplitude, and the ValidationEngine checks every point, the time step, and
+that points are in order and evenly spaced. A file with anything missing is
+refused and nothing is half-loaded. The expected layout is in
+[docs/MATLAB_IMPORT.md](docs/MATLAB_IMPORT.md) (our proposal until the
+client confirms his MATLAB output); samples are in `samples/matlab/`.
+
 ## Working as a team
 
 `main` is protected: make a branch, push it, and open a pull request.

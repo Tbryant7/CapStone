@@ -67,6 +67,12 @@ class ProgramPanel(QGroupBox):
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         layout.addWidget(self.table, 1)
 
+        #: One line about time-series data (imported from MATLAB / CSV).
+        self.time_series_label = QLabel()
+        self.time_series_label.setObjectName("timeSeriesSummary")
+        self.time_series_label.setWordWrap(True)
+        layout.addWidget(self.time_series_label)
+
         self.validation_label = QLabel()
         self.validation_label.setObjectName("validationResult")
         layout.addWidget(self.validation_label)
@@ -87,6 +93,8 @@ class ProgramPanel(QGroupBox):
         self.name_label.setText(EMPTY_TEXT)
         self.table.setRowCount(0)
         self.table.hide()
+        self.time_series_label.clear()
+        self.time_series_label.hide()
         self.validation_label.clear()
         self.validation_label.hide()
         self.problems_label.clear()
@@ -101,12 +109,13 @@ class ProgramPanel(QGroupBox):
         self.table.setRowCount(len(program.channels))
         for row, channel in enumerate(program.channels):
             for column, (_, attribute, parameter) in enumerate(COLUMNS):
-                value = getattr(channel, attribute)
-                item = QTableWidgetItem(_format(value))
+                values = _cell_values(channel, attribute)
+                text = _format_span(values)
+                item = QTableWidgetItem(text)
                 item.setTextAlignment(Qt.AlignCenter)
-                if parameter and not self._in_range(parameter, value):
+                if parameter and not all(self._in_range(parameter, v) for v in values):
                     # The words are in the problems list below; red is an extra cue.
-                    item.setText(f"{_format(value)}  ✖ out of range")
+                    item.setText(f"{text}  ✖ out of range")
                     item.setBackground(QBrush(OUT_OF_RANGE_BACKGROUND))
                     item.setForeground(QBrush(OUT_OF_RANGE_TEXT))
                     bold = QFont(item.font())
@@ -114,6 +123,10 @@ class ProgramPanel(QGroupBox):
                     item.setFont(bold)
                 self.table.setItem(row, column, item)
         self.table.show()
+
+        summary = _time_series_summary(program)
+        self.time_series_label.setText(summary)
+        self.time_series_label.setVisible(bool(summary))
 
         if result.is_valid:
             self.validation_label.setText("Validation: Passed")
@@ -139,6 +152,38 @@ class ProgramPanel(QGroupBox):
             return self.ranges[parameter].contains(value)
         except (KeyError, TypeError):
             return True
+
+
+def _cell_values(channel, attribute: str) -> list:
+    """The value(s) to show: every point's value for a time-series channel."""
+    points = getattr(channel, "time_series", None) or []
+    if points and attribute in ("pulse_width_us", "amplitude_ma"):
+        return [getattr(p, attribute) for p in points]
+    return [getattr(channel, attribute)]
+
+
+def _format_span(values: list) -> str:
+    """One value as is; a time series as "low – high" (or one value if flat)."""
+    numbers = [v for v in values if isinstance(v, (int, float)) and not isinstance(v, bool)]
+    if len(values) == 1 or len(numbers) != len(values):
+        return _format(values[0]) if len(values) == 1 else "varies"
+    low, high = min(numbers), max(numbers)
+    return _format(low) if low == high else f"{_format(low)} – {_format(high)}"
+
+
+def _time_series_summary(program) -> str:
+    counted = [c for c in program.channels if getattr(c, "time_series", None)]
+    if not counted:
+        return ""
+    points = counted[0].time_series
+    times = [p.time_s for p in points if isinstance(p.time_s, (int, float))]
+    span = f", {_format(min(times))} – {_format(max(times))} s" if times else ""
+    step = program.time_step_ms
+    step_text = f", {_format(step)} ms step" if isinstance(step, (int, float)) else ""
+    return (
+        f"Time series: {len(points)} points per channel{span}{step_text}. "
+        "Pulse width and amplitude show the lowest – highest value over time."
+    )
 
 
 def _format(value) -> str:

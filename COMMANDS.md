@@ -245,6 +245,35 @@ Then show the tests (round trip save/load, damaged files, the panel):
 python -m pytest tests\test_program_file_manager.py tests\test_program_panel.py -v
 ```
 
+### Sprint 2: MATLAB / CSV import
+
+Check the MATLAB and CSV samples in the terminal:
+
+```
+python -m validation samples\matlab\ramp_2ch.mat samples\matlab\ramp_2ch.csv samples\matlab\client_example_25ma.mat samples\matlab\missing_frequency.mat
+```
+
+Expected: both `ramp_2ch` files **PASSED**; `client_example_25ma.mat`
+**FAILED** (the client's 25 mA / 1 ms example is outside the placeholder
+limits); `missing_frequency.mat` **COULD NOT IMPORT**.
+
+Then in the app:
+
+```
+python run_menu.py
+```
+
+1. **Import Program / MATLAB File**, open the `matlab` folder, choose
+   `ramp_2ch.mat`: 2 channels, amplitude shown as
+   "0 – 2.5", a "Time series: 201 points ..." line, "Validation: Passed".
+2. Import `samples\matlab\client_example_25ma.mat`: "0 – 25 ✖ out of range"
+   and two plain-language problems.
+3. Import `samples\matlab\missing_frequency.mat`: an error lists what's
+   missing, and the previous program stays on screen.
+
+The expected file layout is in `docs\MATLAB_IMPORT.md`, with a MATLAB
+example in `samples\matlab\make_example.m`.
+
 ---
 
 ## 4. Test Pulse Window options
@@ -354,6 +383,7 @@ Confirm the values with COSMIIC before using real hardware.
 | `python -m pytest tests\test_validation_engine.py` | ValidationEngine and `python -m validation` |
 | `python -m pytest tests\test_range_table.py` | Safe range file and "refuses to start" |
 | `python -m pytest tests\test_wss_status_bar.py` | WSS status bar and channel count |
+| `python -m pytest tests\test_matlab_import.py` | MATLAB / CSV import and time-series checks |
 | `python -m pytest tests\test_pulse_window_gui.py` | Test Pulse Window |
 | `python -m pytest -k disconnect` | Only tests with "disconnect" in the name |
 | `python -m pytest -rs` | Also say why skipped tests were skipped |
