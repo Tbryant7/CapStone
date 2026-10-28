@@ -50,7 +50,7 @@ def test_connect_button_on_the_bar(menu, app):
     bar.connect_button.click()
     app.processEvents()
     assert bar.state_label.text() == "WSS: Connected"
-    assert bar.channels_label.text() == "Channels: 4"
+    assert bar.channels_label.text() == "Channels: 4 on WSS"
     assert bar.connect_button.text() == "Disconnect"
 
     bar.connect_button.click()

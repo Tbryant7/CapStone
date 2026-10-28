@@ -111,6 +111,9 @@ class ProgramRunner:
             )
         if not self.adapter.is_connected:
             return "Connect to the WSS first."
+        missing = unavailable_channels(self.program, self.adapter.channel_count())
+        if missing:
+            return channel_mismatch_message(missing, self.adapter.channel_count())
         return ""
 
     # ------------------------------------------------------------ control
@@ -181,6 +184,35 @@ class ProgramRunner:
         self.adapter.stop()
         text = str(ex).splitlines()[0] if str(ex) else type(ex).__name__
         self.state, self.detail = RunState.ERROR, f"{text} Stimulation stopped."
+
+
+def program_channel_numbers(program: Any) -> list[int]:
+    """The channel numbers a program uses, in order (whole numbers only)."""
+    numbers = []
+    for channel in getattr(program, "channels", None) or []:
+        n = channel.number
+        if isinstance(n, (int, float)) and not isinstance(n, bool) and float(n).is_integer():
+            numbers.append(int(n))
+    return numbers
+
+
+def unavailable_channels(program: Any, device_channels: int | None) -> list[int]:
+    """Channels the program uses that the connected WSS doesn't report
+    (REQ-21, SRS "Configure Multiple Channels" A1). Empty when the device
+    count is unknown: the WSS itself still rejects channels it doesn't have."""
+    if device_channels is None:
+        return []
+    return [n for n in program_channel_numbers(program) if not 1 <= n <= device_channels]
+
+
+def channel_mismatch_message(missing: list[int], device_channels: int | None) -> str:
+    names = ", ".join(str(n) for n in missing)
+    word = "Channel" if len(missing) == 1 else "Channels"
+    verb = "isn't" if len(missing) == 1 else "aren't"
+    return (
+        f"{word} {names} {verb} available on the connected WSS "
+        f"(it reports {device_channels} channel{'s' if device_channels != 1 else ''})."
+    )
 
 
 def build_frames(program: Any) -> list[Frame]:

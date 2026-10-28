@@ -30,7 +30,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from channels import ProgramRunner, RunRefused, RunState
+from channels import ProgramRunner, RunRefused, RunState, program_channel_numbers
 from comms import AdapterStatus, CommunicationAdapter, ConnectionState
 
 from .wss_status_bar import WssStatusBar
@@ -167,6 +167,7 @@ class ExecutionWindow(QMainWindow):
 
         self.setCentralWidget(root)
         self.wss_status_bar = WssStatusBar(self.adapter, show_connect_button=True)
+        self.wss_status_bar.set_program_channels(program_channel_numbers(self.opened.program))
         self.setStatusBar(self.wss_status_bar)
         self.setStyleSheet(
             """

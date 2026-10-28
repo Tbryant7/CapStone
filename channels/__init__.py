@@ -9,6 +9,9 @@ from .program_runner import (
     RunRefused,
     RunState,
     build_frames,
+    channel_mismatch_message,
+    program_channel_numbers,
+    unavailable_channels,
 )
 
 __all__ = [
@@ -19,4 +22,7 @@ __all__ = [
     "RunRefused",
     "RunState",
     "build_frames",
+    "channel_mismatch_message",
+    "program_channel_numbers",
+    "unavailable_channels",
 ]
