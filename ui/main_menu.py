@@ -173,6 +173,20 @@ class MainMenuWindow(QMainWindow):
         self.program_panel = ProgramPanel(self.file_manager.engine.ranges)
         body_layout.addWidget(self.program_panel, 1)
 
+        # Open the Execution / Status screen (SDS Screen 4) for this program.
+        run_row = QHBoxLayout()
+        self.run_hint = QLabel("Open a program to run it.")
+        self.run_hint.setObjectName("runHint")
+        self.run_hint.setWordWrap(True)
+        run_row.addWidget(self.run_hint, 1)
+        self.run_button = QPushButton("Run / Execute...")
+        self.run_button.setObjectName("runProgramButton")
+        self.run_button.setEnabled(False)
+        self.run_button.clicked.connect(self.open_execution_screen)
+        run_row.addWidget(self.run_button)
+        body_layout.addLayout(run_row)
+        self.execution_window = None
+
         layout.addWidget(body, 1)
 
         # WSS status bar (SDS Screen 1: "a persistent status bar confirms
@@ -368,6 +382,7 @@ class MainMenuWindow(QMainWindow):
             return False
 
         self.program_panel.show_program(opened)
+        self._update_run_button(opened)
 
         previous = next(
             (
@@ -410,8 +425,34 @@ class MainMenuWindow(QMainWindow):
 
         self.open_program_file(file_path)
 
+    def _update_run_button(self, opened) -> None:
+        if self.adapter is None:
+            self.run_button.setEnabled(False)
+            self.run_hint.setText("No WSS connection is set up (start with run_menu.py --fake).")
+        elif not opened.validation.is_valid:
+            self.run_button.setEnabled(False)
+            self.run_hint.setText("This program failed validation, so it can't run.")
+        else:
+            self.run_button.setEnabled(True)
+            self.run_hint.setText("Passed validation. Open the execution screen to run it.")
+
+    def open_execution_screen(self) -> None:
+        """Show the Execution / Status screen for the opened program."""
+        opened = self.program_panel.opened
+        if opened is None or self.adapter is None:
+            return
+        if self.execution_window is not None:
+            self.execution_window.close()
+        from ui.execution_window import ExecutionWindow
+
+        self.execution_window = ExecutionWindow(opened, self.adapter)
+        self.execution_window.show()
+        self.execution_window.raise_()
+
     def closeEvent(self, event) -> None:  # noqa: N802 (Qt name)
         """Stop the status bar timer and close the WSS link safely."""
+        if self.execution_window is not None:
+            self.execution_window.close()
         if self.wss_status_bar is not None:
             self.wss_status_bar.stop()
         if self.adapter is not None and self.adapter.is_connected:
