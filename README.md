@@ -163,6 +163,30 @@ refused and nothing is half-loaded. The expected layout is in
 [docs/MATLAB_IMPORT.md](docs/MATLAB_IMPORT.md) (our proposal until the
 client confirms his MATLAB output); samples are in `samples/matlab/`.
 
+## Run / Execute (SDS Screen 4, early Sprint 4)
+
+**Run / Execute...** on the Main Menu opens the Execution / Status screen
+for the opened program (`ui/execution_window.py`): Run, an oversized STOP
+STIMULATION, progress, per-channel "Stimulating / Off" with current
+values, a live command log, and the WSS status bar. The program lifecycle
+follows SDS Figure 3.3: Ready → Running → Complete / Stopped / Error.
+
+The rules live in `channels/program_runner.py`, so they hold no matter
+which screen calls it:
+
+- only programs that passed validation run (REQ-17)
+- STOP always works and stops output first (REQ-19)
+- a lost connection ends the run as an error and stops output (SRS §5.2)
+- closing the screen or the Main Menu never leaves stimulation running
+- **fake / simulated WSS only for now**: real hardware is refused until
+  COSMIIC confirms the safe limits and the run is checked in the lab
+  (the wrapper also sends amplitude as a whole number, so 2.5 mA would
+  become 2; check this on the lab WSS first)
+
+Time-series programs send one step per `time_step_ms` using a Qt timer.
+That's fine for simulated testing, but it isn't real-time accurate; real
+timing has to come from the WSS (SRS §5.1, timing tolerance still TBD).
+
 ## Working as a team
 
 `main` is protected: make a branch, push it, and open a pull request.

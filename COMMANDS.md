@@ -274,6 +274,33 @@ python run_menu.py
 The expected file layout is in `docs\MATLAB_IMPORT.md`, with a MATLAB
 example in `samples\matlab\make_example.m`.
 
+### Run / Execute a program on the fake WSS (early Sprint 4)
+
+Everything in one place: open a file, see if it passes validation, run it.
+
+```
+python run_menu.py --fake
+```
+
+1. Click **Connect** on the status bar at the bottom.
+2. **Import Program / MATLAB File** → `samples\matlab\ramp_2ch.mat`.
+   The hint under the panel says it passed, and **Run / Execute...** lights up.
+3. Click **Run / Execute...**. The Execution / Status screen opens.
+4. Click **Run**: "State: Running", a progress bar ("Step 81 of 201 · t = 1.6 s
+   of 4 s"), each channel "Stimulating" with its current values, and every
+   command in the live log. It ends in "State: Complete".
+5. Run again and press **STOP STIMULATION** part-way: "State: Stopped",
+   all channels "Off".
+6. Run again and click **Disconnect** on the status bar: "State: Error,
+   Connection lost ... Stimulation stopped".
+7. Back on the Main Menu, import `samples\unsafe_amplitude.json`:
+   **Run / Execute...** stays greyed out ("This program failed validation,
+   so it can't run").
+
+`samples\valid_4_channel.json` runs as constant values: sent once, then
+held until STOP. Running on the real WSS is turned off until COSMIIC
+confirms the safe limits.
+
 ---
 
 ## 4. Test Pulse Window options
@@ -384,6 +411,7 @@ Confirm the values with COSMIIC before using real hardware.
 | `python -m pytest tests\test_range_table.py` | Safe range file and "refuses to start" |
 | `python -m pytest tests\test_wss_status_bar.py` | WSS status bar and channel count |
 | `python -m pytest tests\test_matlab_import.py` | MATLAB / CSV import and time-series checks |
+| `python -m pytest tests\test_execution.py` | Run / Execute screen and its safety rules |
 | `python -m pytest tests\test_pulse_window_gui.py` | Test Pulse Window |
 | `python -m pytest -k disconnect` | Only tests with "disconnect" in the name |
 | `python -m pytest -rs` | Also say why skipped tests were skipped |
