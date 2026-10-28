@@ -81,8 +81,8 @@ WSS is connected, not connected or lost, and the channel count the device
 reports (`adapter.channel_count()`, not a hard-coded 4). It shows a
 SIMULATED label in fake and simulated modes. It updates on every connection
 change and re-checks every 2 seconds, so an unplugged WSS shows within a few
-seconds. It's in the Test Pulse Window now and will move to the main window
-once that exists. Try `python run_gui.py --fake --fake-channels 6`.
+seconds. It's on the Main Menu (`python run_menu.py --fake`), with its own
+Connect button, and in the Test Pulse Window. Try `python run_gui.py --fake --fake-channels 6`.
 
 On the real WSS the channel count comes from asking the device which
 channels are valid (`IsFingerValid("ch1")`, `"ch2"`, ...). This hasn't been

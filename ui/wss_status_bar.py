@@ -16,7 +16,7 @@ from __future__ import annotations
 from typing import Callable
 
 from PySide6.QtCore import QObject, QTimer, Signal
-from PySide6.QtWidgets import QLabel, QStatusBar
+from PySide6.QtWidgets import QLabel, QPushButton, QStatusBar
 
 from comms import AdapterStatus, CommunicationAdapter, ConnectionState
 
@@ -49,6 +49,7 @@ class WssStatusBar(QStatusBar):
         adapter: CommunicationAdapter,
         check_interval_ms: int = CHECK_INTERVAL_MS,
         port_lister: Callable[[], list[str]] = list_serial_ports,
+        show_connect_button: bool = False,
         parent=None,
     ) -> None:
         super().__init__(parent)
@@ -77,6 +78,20 @@ class WssStatusBar(QStatusBar):
         self.addWidget(self.channels_label)
         self.addPermanentWidget(self.mode_label)
 
+        #: Optional Connect/Disconnect button, for windows that have no
+        #: connection controls of their own (e.g. the Main Menu).
+        self.connect_button: QPushButton | None = None
+        self.error_label = QLabel()
+        self.error_label.setObjectName("wssError")
+        self.error_label.setStyleSheet("color: #c62828;")
+        self.error_label.setVisible(False)
+        self.addWidget(self.error_label)
+        if show_connect_button:
+            self.connect_button = QPushButton("Connect")
+            self.connect_button.setObjectName("wssConnectButton")
+            self.connect_button.clicked.connect(self.toggle_connection)
+            self.addPermanentWidget(self.connect_button)
+
         self._bridge = _Bridge()
         self._bridge.changed.connect(self._on_status)
         adapter.add_status_listener(self._bridge.changed.emit)
@@ -93,6 +108,20 @@ class WssStatusBar(QStatusBar):
     def _on_status(self, status: AdapterStatus) -> None:
         if status.state is ConnectionState.LOST:
             self._lost_reason = status.detail
+        self.refresh()
+
+    def toggle_connection(self) -> None:
+        """Connect, or disconnect (which always stops stimulation first)."""
+        self.error_label.setVisible(False)
+        try:
+            if self.adapter.is_connected:
+                self.adapter.disconnect()
+            else:
+                self.adapter.connect()
+        except Exception as ex:  # wrong port, unplugged, .NET missing ...
+            text = str(ex).splitlines()[0] if str(ex) else type(ex).__name__
+            self.error_label.setText(f"Could not connect: {text}")
+            self.error_label.setVisible(True)
         self.refresh()
 
     def _tick(self) -> None:
@@ -121,6 +150,11 @@ class WssStatusBar(QStatusBar):
             )
         else:
             self.channels_label.setText("Channels: none (not connected)")
+
+        if self.connect_button is not None:
+            self.connect_button.setText(
+                "Disconnect" if state is ConnectionState.CONNECTED else "Connect"
+            )
 
     def text(self) -> str:
         """Everything the bar shows, as one line (handy for tests and logs)."""

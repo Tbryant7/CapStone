@@ -21,8 +21,10 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from comms import CommunicationAdapter
 from files import ProgramFileError, ProgramFileManager
 from ui.program_panel import ProgramPanel
+from ui.wss_status_bar import WssStatusBar
 
 RECENT_PROGRAMS_FILE = (
     Path(__file__).resolve().parent.parent / "config" / "recent_programs.json"
@@ -36,8 +38,13 @@ SAMPLES_FOLDER = Path(__file__).resolve().parent.parent / "samples"
 class MainMenuWindow(QMainWindow):
     """Screen 1 main menu based on SDS Figure 4.2."""
 
-    def __init__(self, file_manager: ProgramFileManager | None = None) -> None:
+    def __init__(
+        self,
+        file_manager: ProgramFileManager | None = None,
+        adapter: CommunicationAdapter | None = None,
+    ) -> None:
         super().__init__()
+        self.adapter = adapter
 
         self.setWindowTitle("COSMIIC - Main Menu")
         self.setMinimumSize(900, 760)
@@ -168,18 +175,15 @@ class MainMenuWindow(QMainWindow):
 
         layout.addWidget(body, 1)
 
-        # Bottom device status
-        self.status_label = QLabel("Device status: Not connected")
-        self.status_label.setObjectName("deviceStatus")
-        self.status_label.setAlignment(Qt.AlignCenter)
-        self.status_label.setFixedHeight(38)
-
-        status_container = QWidget()
-        status_layout = QHBoxLayout(status_container)
-        status_layout.setContentsMargins(15, 5, 15, 15)
-        status_layout.addWidget(self.status_label)
-
-        layout.addWidget(status_container)
+        # WSS status bar (SDS Screen 1: "a persistent status bar confirms
+        # the WSS connection and channel count"). Without an adapter the
+        # window still opens, and the bar says no WSS connection is set up.
+        if self.adapter is not None:
+            self.wss_status_bar = WssStatusBar(self.adapter, show_connect_button=True)
+            self.setStatusBar(self.wss_status_bar)
+        else:
+            self.wss_status_bar = None
+            self.statusBar().showMessage("WSS: no connection set up (start with run_menu.py)")
 
         # Finish building the window
         self.setCentralWidget(root)
@@ -412,3 +416,14 @@ class MainMenuWindow(QMainWindow):
             return
 
         self.open_program_file(file_path)
+
+    def closeEvent(self, event) -> None:  # noqa: N802 (Qt name)
+        """Stop the status bar timer and close the WSS link safely."""
+        if self.wss_status_bar is not None:
+            self.wss_status_bar.stop()
+        if self.adapter is not None and self.adapter.is_connected:
+            try:
+                self.adapter.disconnect()  # always stops stimulation first
+            except Exception:
+                pass
+        super().closeEvent(event)

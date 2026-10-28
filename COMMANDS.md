@@ -182,6 +182,16 @@ python -m pytest tests\test_validation_engine.py tests\test_range_table.py -v
 
 ### Sprint 2: WSS status bar
 
+The status bar is on the Main Menu (and the Test Pulse Window):
+
+```
+python run_menu.py --fake --fake-channels 6
+```
+
+Click **Connect** at the right end of the bar: "WSS: Connected | Channels: 6".
+Click **Disconnect** to go back. The steps below use the Test Pulse Window,
+which also has **Simulate disconnect**:
+
 ```
 python run_gui.py --fake --fake-channels 6
 ```
