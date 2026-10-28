@@ -59,7 +59,7 @@ def test_connect_shows_connected_and_device_channel_count(app):
     adapter.connect()
     app.processEvents()
     assert bar.state_label.text() == "WSS: Connected"
-    assert bar.channels_label.text() == "Channels: 6"
+    assert bar.channels_label.text() == "Channels: 6 on WSS"
     bar.stop()
 
 
@@ -69,7 +69,7 @@ def test_channel_count_change_is_picked_up_by_the_timer(app):
     adapter.connect()
     adapter.reported_channels = 2
     bar._tick()  # what the 2-second timer does
-    assert bar.channels_label.text() == "Channels: 2"
+    assert bar.channels_label.text() == "Channels: 2 on WSS"
     bar.stop()
 
 
@@ -290,6 +290,6 @@ def test_test_pulse_window_has_the_status_bar(app):
     window.connect_button.click()
     app.processEvents()
     assert window.wss_status_bar.text() == (
-        "WSS: Connected | Channels: 5 | SIMULATED (fake mode)"
+        "WSS: Connected | Channels: 5 on WSS | SIMULATED (fake mode)"
     )
     window.close()

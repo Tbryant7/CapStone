@@ -298,7 +298,18 @@ python run_menu.py --fake
    so it can't run").
 
 `samples\valid_4_channel.json` runs as constant values: sent once, then
-held until STOP. Running on the real WSS is turned off until COSMIIC
+held until STOP.
+
+The status bar shows the WSS's channel count and the channels the opened
+program uses ("Channels: 4 on WSS · program uses 2 (1, 2)"). To see a
+mismatch, start with a 2-channel fake WSS and open the 4-channel sample:
+
+```
+python run_menu.py --fake --fake-channels 2 samples\valid_4_channel.json
+```
+
+After **Connect**, the bar says "not on this WSS: 3, 4" in red and
+**Run / Execute...** stays greyed out with the reason. Running on the real WSS is turned off until COSMIIC
 confirms the safe limits.
 
 ---

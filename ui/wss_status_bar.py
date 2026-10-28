@@ -57,6 +57,8 @@ class WssStatusBar(QStatusBar):
         self._port_lister = port_lister
         self._simulated = adapter.mode != "hardware"
         self._lost_reason = ""
+        #: Channel numbers of the opened program, shown next to the device count.
+        self._program_channels: list[int] | None = None
         self.setSizeGripEnabled(False)
 
         self.state_label = QLabel()
@@ -110,6 +112,11 @@ class WssStatusBar(QStatusBar):
             self._lost_reason = status.detail
         self.refresh()
 
+    def set_program_channels(self, numbers: list[int] | None) -> None:
+        """Show which channels the opened program uses (None hides it)."""
+        self._program_channels = list(numbers) if numbers is not None else None
+        self.refresh()
+
     def toggle_connection(self) -> None:
         """Connect, or disconnect (which always stops stimulation first)."""
         self.error_label.setVisible(False)
@@ -142,14 +149,24 @@ class WssStatusBar(QStatusBar):
         self.state_label.setText(text)
         self.state_label.setStyleSheet(f"color: {STATE_COLOR[state]}; font-weight: bold;")
 
+        count = self.adapter.channel_count() if state is ConnectionState.CONNECTED else None
         if state is ConnectionState.CONNECTED:
-            count = self.adapter.channel_count()
-            self.channels_label.setText(
-                "Channels: unknown" if count is None
-                else f"Channels: {count}"
-            )
+            device = "Channels: unknown" if count is None else f"Channels: {count} on WSS"
         else:
-            self.channels_label.setText("Channels: none (not connected)")
+            device = "Channels: none (not connected)"
+
+        style = ""
+        if self._program_channels is not None:
+            used = self._program_channels
+            device += f" · program uses {len(used)} ({', '.join(str(n) for n in used)})"
+            missing = (
+                [n for n in used if not 1 <= n <= count] if count is not None else []
+            )
+            if missing:
+                device += f" · not on this WSS: {', '.join(str(n) for n in missing)}"
+                style = "color: #c62828; font-weight: bold;"
+        self.channels_label.setText(device)
+        self.channels_label.setStyleSheet(style)
 
         if self.connect_button is not None:
             self.connect_button.setText(

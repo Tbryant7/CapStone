@@ -21,6 +21,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from channels import channel_mismatch_message, program_channel_numbers, unavailable_channels
 from comms import CommunicationAdapter
 from files import ProgramFileError, ProgramFileManager
 from ui.program_panel import ProgramPanel
@@ -195,6 +196,7 @@ class MainMenuWindow(QMainWindow):
         if self.adapter is not None:
             self.wss_status_bar = WssStatusBar(self.adapter, show_connect_button=True)
             self.setStatusBar(self.wss_status_bar)
+            self.wss_status_bar._bridge.changed.connect(lambda _status: self._update_run_button())
         else:
             self.wss_status_bar = None
             self.statusBar().showMessage("WSS: no connection set up (start with run_menu.py)")
@@ -425,7 +427,12 @@ class MainMenuWindow(QMainWindow):
 
         self.open_program_file(file_path)
 
-    def _update_run_button(self, opened) -> None:
+    def _update_run_button(self, opened=None) -> None:
+        opened = opened or self.program_panel.opened
+        if opened is None:
+            return
+        if self.wss_status_bar is not None:
+            self.wss_status_bar.set_program_channels(program_channel_numbers(opened.program))
         if self.adapter is None:
             self.run_button.setEnabled(False)
             self.run_hint.setText("No WSS connection is set up (start with run_menu.py --fake).")
@@ -433,8 +440,14 @@ class MainMenuWindow(QMainWindow):
             self.run_button.setEnabled(False)
             self.run_hint.setText("This program failed validation, so it can't run.")
         else:
-            self.run_button.setEnabled(True)
-            self.run_hint.setText("Passed validation. Open the execution screen to run it.")
+            device = self.adapter.channel_count() if self.adapter.is_connected else None
+            missing = unavailable_channels(opened.program, device)
+            self.run_button.setEnabled(not missing)
+            if missing:
+                why = channel_mismatch_message(missing, device)
+                self.run_hint.setText(f"Passed validation, but {why[0].lower()}{why[1:]} It can't run on this WSS.")
+            else:
+                self.run_hint.setText("Passed validation. Open the execution screen to run it.")
 
     def open_execution_screen(self) -> None:
         """Show the Execution / Status screen for the opened program."""

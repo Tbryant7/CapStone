@@ -269,3 +269,81 @@ def test_main_menu_without_adapter_cannot_run(app, tmp_path):
         assert not menu.run_button.isEnabled()
         assert "No WSS connection" in menu.run_hint.text()
         menu.close()
+
+
+# --------------------------------------------- program channels vs device
+
+
+def test_runner_refuses_channels_the_device_does_not_have():
+    o = opened("valid_4_channel.json")
+    adapter = connected(channel_count=2)
+    runner = ProgramRunner(adapter, o.program, o.validation)
+    assert runner.why_not_runnable() == (
+        "Channels 3, 4 aren't available on the connected WSS (it reports 2 channels)."
+    )
+    with pytest.raises(RunRefused, match="Channels 3, 4"):
+        runner.start()
+    assert not any(r.command == "stimulate_analog" for r in adapter.command_log)
+
+
+def test_runner_allows_a_program_that_fits_the_device():
+    o = opened("matlab/ramp_2ch.mat")
+    assert ProgramRunner(connected(channel_count=2), o.program, o.validation).why_not_runnable() == ""
+
+
+def test_status_bar_shows_device_and_program_channels(app, tmp_path):
+    from ui.main_menu import MainMenuWindow
+
+    with patch("ui.main_menu.RECENT_PROGRAMS_FILE", tmp_path / "recent.json"):
+        menu = MainMenuWindow(ProgramFileManager(ValidationEngine(TEST_RANGES)), connected(channel_count=4))
+        bar = menu.wss_status_bar
+        assert bar.channels_label.text() == "Channels: 4 on WSS"
+        menu.open_program_file(SAMPLES / "matlab" / "ramp_2ch.mat")
+        assert bar.channels_label.text() == "Channels: 4 on WSS · program uses 2 (1, 2)"
+        menu.open_program_file(SAMPLES / "valid_1_channel.json")
+        assert bar.channels_label.text() == "Channels: 4 on WSS · program uses 1 (1)"
+        menu.close()
+
+
+def test_mismatch_is_named_on_the_bar_and_in_the_run_hint(app, tmp_path):
+    from ui.main_menu import MainMenuWindow
+
+    with patch("ui.main_menu.RECENT_PROGRAMS_FILE", tmp_path / "recent.json"):
+        adapter = connected(channel_count=2)
+        menu = MainMenuWindow(ProgramFileManager(ValidationEngine(TEST_RANGES)), adapter)
+        menu.open_program_file(SAMPLES / "valid_4_channel.json")
+        text = menu.wss_status_bar.channels_label.text()
+        assert text == "Channels: 2 on WSS · program uses 4 (1, 2, 3, 4) · not on this WSS: 3, 4"
+        assert "c62828" in menu.wss_status_bar.channels_label.styleSheet()  # red, as well as words
+        assert "channels 3, 4 aren't available" in menu.run_hint.text()
+        assert not menu.run_button.isEnabled()
+
+        adapter.reported_channels = 4          # a bigger WSS
+        menu.wss_status_bar._tick()            # what the 2-second timer does
+        menu._update_run_button()
+        assert "not on this WSS" not in menu.wss_status_bar.channels_label.text()
+        assert menu.run_hint.text() == "Passed validation. Open the execution screen to run it."
+        assert menu.run_button.isEnabled()
+        menu.close()
+
+
+def test_execution_screen_explains_a_channel_mismatch(app):
+    w = window_for("valid_4_channel.json", connected(channel_count=3))
+    assert not w.run_button.isEnabled()
+    assert w.reason_label.text() == "Channel 4 isn't available on the connected WSS (it reports 3 channels)."
+    assert w.wss_status_bar.channels_label.text().endswith("not on this WSS: 4")
+    w.close()
+
+
+def test_hint_updates_when_the_connection_changes(app, tmp_path):
+    from ui.main_menu import MainMenuWindow
+
+    with patch("ui.main_menu.RECENT_PROGRAMS_FILE", tmp_path / "recent.json"):
+        adapter = FakeCommunicationAdapter(channel_count=2)   # not connected yet
+        menu = MainMenuWindow(ProgramFileManager(ValidationEngine(TEST_RANGES)), adapter)
+        menu.open_program_file(SAMPLES / "valid_4_channel.json")
+        assert "aren't available" not in menu.run_hint.text()  # device count unknown until connected
+        adapter.connect()
+        app.processEvents()
+        assert "channels 3, 4 aren't available" in menu.run_hint.text()
+        menu.close()
