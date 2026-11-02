@@ -8,6 +8,7 @@ from pathlib import Path
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
+    QAbstractItemView,
     QFileDialog,
     QGridLayout,
     QGroupBox,
@@ -110,6 +111,12 @@ class MainMenuWindow(QMainWindow):
 
         self.recent_list = QListWidget()
         self.recent_list.setObjectName("recentProgramsList")
+        # Scroll smoothly by pixels, not a whole (tall) item at a time.
+        # Per-item scrolling misbehaves with Windows touchpads / precision
+        # mice, and the list could get stuck when scrolling back up.
+        self.recent_list.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
+        self.recent_list.verticalScrollBar().setSingleStep(16)
+        self.recent_list.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         recent_layout.addWidget(self.recent_list)
 
         self.recent_list.currentRowChanged.connect(
