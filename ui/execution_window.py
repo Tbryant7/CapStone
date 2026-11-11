@@ -57,6 +57,7 @@ class ExecutionWindow(QMainWindow):
         self.adapter = adapter
         self.runner = ProgramRunner(adapter, opened.program, opened.validation)
         self._log_shown = len(adapter.command_log)
+        self._report_pending = False
 
         self.setWindowTitle("COSMIIC - Stimulation Execution / Status")
         self.setMinimumSize(760, 620)
@@ -158,6 +159,12 @@ class ExecutionWindow(QMainWindow):
         self.log_view.setMaximumBlockCount(5000)
         layout.addWidget(self.log_view, 1)
 
+        self.run_report = QLabel()
+        self.run_report.setTextFormat(Qt.PlainText)
+        self.run_report.setWordWrap(True)
+        self.run_report.hide()
+        layout.addWidget(self.run_report)
+
         back = QHBoxLayout()
         back.addStretch(1)
         self.back_button = QPushButton("Back to Main Menu")
@@ -188,6 +195,8 @@ class ExecutionWindow(QMainWindow):
         except RunRefused as ex:
             self.reason_label.setText(str(ex))
             return
+        self.run_report.hide()
+        self._report_pending = True
         if self.runner.state is RunState.RUNNING:
             self._timer.start()
         self.refresh()
@@ -240,6 +249,27 @@ class ExecutionWindow(QMainWindow):
         else:
             self.reason_label.setText(reason)
         self._refresh_log()
+        self._update_run_report()
+
+    def _update_run_report(self) -> None:
+        state = self.runner.state
+        if not self._report_pending or state not in (
+            RunState.COMPLETE, RunState.STOPPED, RunState.ERROR
+        ):
+            return
+
+        program = self.opened.program
+        channels = ", ".join(str(number) for number in sorted(program_channel_numbers(program)))
+        result = state.value
+        if self.runner.detail:
+            result = f"{result} — {self.runner.detail}"
+
+        self.run_report.setText(
+            f"Run report\nProgram: {program.name}\n"
+            f"Program channels: {channels or 'None'}\nResult: {result}"
+        )
+        self.run_report.show()
+        self._report_pending = False
 
     def _fill_channels(self) -> None:
         frame = self.runner.current

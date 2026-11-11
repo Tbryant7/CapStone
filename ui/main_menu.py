@@ -17,6 +17,7 @@ from PySide6.QtWidgets import (
     QMainWindow,
     QMessageBox,
     QPushButton,
+    QStackedWidget,
     QVBoxLayout,
     QWidget,
 )
@@ -201,8 +202,12 @@ class MainMenuWindow(QMainWindow):
             self.wss_status_bar = None
             self.statusBar().showMessage("WSS: no connection set up (start with run_menu.py)")
 
-        # Finish building the window
-        self.setCentralWidget(root)
+        self._main_menu_page = root
+        self._advanced_page = self._build_advanced_page()
+        self._pages = QStackedWidget()
+        self._pages.addWidget(self._main_menu_page)
+        self._pages.addWidget(self._advanced_page)
+        self.setCentralWidget(self._pages)
 
         # Load all styling from the separate QSS file
         if STYLE_FILE.exists():
@@ -221,10 +226,35 @@ class MainMenuWindow(QMainWindow):
         self.import_button.clicked.connect(self._choose_program_file)
         self.open_button.clicked.connect(self._open_selected_program)
 
+    def _build_advanced_page(self) -> QWidget:
+        page = QWidget()
+        layout = QVBoxLayout(page)
+        layout.setContentsMargins(0, 0, 0, 0)
+
+        title = QLabel("Advanced Mode")
+        title.setObjectName("mainHeader")
+        title.setAlignment(Qt.AlignCenter)
+        title.setFixedHeight(55)
+        layout.addWidget(title)
+        layout.addStretch()
+
+        back_button = QPushButton("Back to Main Menu")
+        back_button.clicked.connect(lambda: self._select_mode("Beginner"))
+        layout.addWidget(back_button, alignment=Qt.AlignHCenter)
+        layout.addStretch()
+        return page
+
     def _select_mode(self, mode: str) -> None:
-        """Allow only one mode to be selected."""
-        self.beginner_button.setChecked(mode == "Beginner")
-        self.advanced_button.setChecked(mode == "Advanced")
+        """Switch between the Main Menu and the Advanced Mode page."""
+        advanced = mode == "Advanced"
+        self.beginner_button.setChecked(not advanced)
+        self.advanced_button.setChecked(advanced)
+        if advanced:
+            self._pages.setCurrentWidget(self._advanced_page)
+            self.setWindowTitle("COSMIIC - Advanced Mode")
+        else:
+            self._pages.setCurrentWidget(self._main_menu_page)
+            self.setWindowTitle("COSMIIC - Main Menu")
 
     def _coming_soon(self) -> None:
         """Show a placeholder for future features."""
