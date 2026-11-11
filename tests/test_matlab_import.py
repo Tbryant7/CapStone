@@ -165,9 +165,9 @@ def test_damaged_mat_file_is_refused(tmp_path):
 def test_missing_file_and_wrong_type(tmp_path):
     with pytest.raises(ProgramFileError, match="not found"):
         import_time_series(tmp_path / "nope.mat")
-    other = tmp_path / "x.txt"
+    other = tmp_path / "x.xlsx"
     other.write_text("hi")
-    with pytest.raises(ProgramFileError, match="only .mat and .csv"):
+    with pytest.raises(ProgramFileError, match="only .mat, .csv and .txt"):
         import_time_series(other)
 
 
@@ -195,7 +195,6 @@ def test_csv_basic(tmp_path, engine):
     ("time_s,ch1_amplitude_ma,ch1_pulse_width_us,ch1_frequency_hz,notes\n0,1,50,20,x\n", '"notes" is not recognized'),
     ("time_s,ch1_amplitude_ma,ch1_pulse_width_us,ch1_frequency_hz\n0,abc,50,20\n", "'abc' is not a number"),
     ("time_s,ch1_amplitude_ma,ch1_pulse_width_us,ch1_frequency_hz\n0,1,50\n", "Row 2 has 3 values"),
-    ("time_s,ch1_amplitude_ma,ch1_pulse_width_us,ch1_frequency_hz\n0,1,50,20\n0.01,1,50,30\n", "same on every row"),
     ("time_s\n", "header row and at least one row"),
 ])
 def test_csv_problems_are_refused(tmp_path, text, message):

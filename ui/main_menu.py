@@ -3,11 +3,13 @@
 
 from __future__ import annotations
 
+import copy
 import json
 from pathlib import Path
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
+    QAbstractItemView,
     QFileDialog,
     QGridLayout,
     QGroupBox,
@@ -49,8 +51,8 @@ class MainMenuWindow(QMainWindow):
         self.adapter = adapter
 
         self.setWindowTitle("COSMIIC - Main Menu")
-        self.setMinimumSize(900, 760)
-        self.resize(960, 800)
+        self.setMinimumSize(900, 820)
+        self.resize(980, 900)
 
         self._recent_programs = []
         self.file_manager = file_manager or ProgramFileManager()
@@ -111,6 +113,12 @@ class MainMenuWindow(QMainWindow):
 
         self.recent_list = QListWidget()
         self.recent_list.setObjectName("recentProgramsList")
+        # Scroll smoothly by pixels, not a whole (tall) item at a time.
+        # Per-item scrolling misbehaves with Windows touchpads / precision
+        # mice, and the list could get stuck when scrolling back up.
+        self.recent_list.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
+        self.recent_list.verticalScrollBar().setSingleStep(16)
+        self.recent_list.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         recent_layout.addWidget(self.recent_list)
 
         self.recent_list.currentRowChanged.connect(
@@ -171,9 +179,12 @@ class MainMenuWindow(QMainWindow):
         content_layout.addLayout(right_panel, 2)
         body_layout.addLayout(content_layout, 1)
 
-        # Read-only view of the opened program (until the Beginner Editor)
-        self.program_panel = ProgramPanel(self.file_manager.engine.ranges)
-        body_layout.addWidget(self.program_panel, 1)
+        # The opened program: values can be edited and save to the file live
+        self.program_panel = ProgramPanel(self.file_manager.engine.ranges, self.file_manager)
+        self.program_panel.program_edited.connect(self._update_run_button)
+        self.program_panel.program_saved_as.connect(self._remember_program)
+        body_layout.addWidget(self.program_panel, 2)
+        self.new_program_window = None
 
         # Open the Execution / Status screen (SDS Screen 4) for this program.
         run_row = QHBoxLayout()
@@ -221,7 +232,7 @@ class MainMenuWindow(QMainWindow):
             )
 
         # Connect the four buttons
-        self.new_button.clicked.connect(self._coming_soon)
+        self.new_button.clicked.connect(self.open_new_program_screen)
         self.help_button.clicked.connect(self._coming_soon)
         self.import_button.clicked.connect(self._choose_program_file)
         self.open_button.clicked.connect(self._open_selected_program)
@@ -392,8 +403,8 @@ class MainMenuWindow(QMainWindow):
             self,
             "Import Program / MATLAB File",
             str(SAMPLES_FOLDER) if SAMPLES_FOLDER.is_dir() else "",
-            "Program Files (*.json *.mat *.csv);;JSON Files (*.json);;"
-            "MATLAB Files (*.mat);;CSV Files (*.csv)",
+            "Program Files (*.json *.mat *.csv *.txt);;JSON Files (*.json);;"
+            "MATLAB Files (*.mat);;CSV Files (*.csv);;Text Files (*.txt)",
         )
 
         if not file_path:
@@ -415,7 +426,11 @@ class MainMenuWindow(QMainWindow):
 
         self.program_panel.show_program(opened)
         self._update_run_button(opened)
+        self._remember_program(opened)
+        return True
 
+    def _remember_program(self, opened) -> None:
+        """Put an opened (or newly saved) program at the top of the recent list."""
         previous = next(
             (
                 program
@@ -428,9 +443,20 @@ class MainMenuWindow(QMainWindow):
             opened.program.name,
             opened.program.description or "No description",
             previous.get("last_run", "Not run yet"),
-            str(Path(file_path).resolve()),
+            str(Path(opened.path).resolve()),
         )
-        return True
+
+    def open_new_program_screen(self) -> None:
+        """Show the New Program screen. A saved program opens here, ready to edit."""
+        from editor.new_program_window import NewProgramWindow
+
+        if self.new_program_window is not None and self.new_program_window.isVisible():
+            self.new_program_window.raise_()
+            self.new_program_window.activateWindow()
+            return
+        self.new_program_window = NewProgramWindow(self.file_manager)
+        self.new_program_window.program_saved.connect(self.open_program_file)
+        self.new_program_window.show()
 
     def _open_selected_program(self) -> None:
         """Handle opening a selected recent program."""
@@ -488,7 +514,10 @@ class MainMenuWindow(QMainWindow):
             self.execution_window.close()
         from ui.execution_window import ExecutionWindow
 
-        self.execution_window = ExecutionWindow(opened, self.adapter)
+        # Run a copy: later edits in the panel must not change a program
+        # that was validated and handed to the runner.
+        snapshot = type(opened)(copy.deepcopy(opened.program), opened.validation, opened.path)
+        self.execution_window = ExecutionWindow(snapshot, self.adapter)
         self.execution_window.show()
         self.execution_window.raise_()
 
@@ -496,6 +525,8 @@ class MainMenuWindow(QMainWindow):
         """Stop the status bar timer and close the WSS link safely."""
         if self.execution_window is not None:
             self.execution_window.close()
+        if self.new_program_window is not None:
+            self.new_program_window.close()
         if self.wss_status_bar is not None:
             self.wss_status_bar.stop()
         if self.adapter is not None and self.adapter.is_connected:

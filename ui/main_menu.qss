@@ -48,6 +48,38 @@ QListWidget::item {
     color: #333333;
 }
 
+/* Draw the list's scrollbar ourselves so it is always visible and works
+   the same everywhere (the Windows 11 style hides it until hover). */
+QListWidget#recentProgramsList QScrollBar:vertical {
+    background: #eeeeee;
+    width: 12px;
+    margin: 0px;
+    border: none;
+}
+
+QListWidget#recentProgramsList QScrollBar::handle:vertical {
+    background: #9e9e9e;
+    min-height: 30px;
+    border-radius: 5px;
+    margin: 1px;
+}
+
+QListWidget#recentProgramsList QScrollBar::handle:vertical:hover {
+    background: #757575;
+}
+
+QListWidget#recentProgramsList QScrollBar::add-line:vertical,
+QListWidget#recentProgramsList QScrollBar::sub-line:vertical {
+    height: 0px;
+    border: none;
+    background: none;
+}
+
+QListWidget#recentProgramsList QScrollBar::add-page:vertical,
+QListWidget#recentProgramsList QScrollBar::sub-page:vertical {
+    background: none;
+}
+
 QListWidget::item:selected {
     background-color: #e5edf5;
     border: 2px solid #6485a5;
@@ -122,4 +154,17 @@ QPushButton#runProgramButton:disabled {
     background-color: #eeeeee;
     border-color: #bdbdbd;
     color: #9e9e9e;
+}
+
+/* Number and text inputs (value editors, New Program screen) */
+QLineEdit, QSpinBox, QDoubleSpinBox {
+    background-color: #ffffff;
+    color: #222222;
+    border: 1px solid #888888;
+    border-radius: 3px;
+    padding: 2px 4px;
+}
+
+QLineEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus {
+    border: 2px solid #4d83b7;
 }

@@ -312,6 +312,83 @@ After **Connect**, the bar says "not on this WSS: 3, 4" in red and
 **Run / Execute...** stays greyed out with the reason. Running on the real WSS is turned off until COSMIIC
 confirms the safe limits.
 
+### Sprint 3: Edit an open program (saves live)
+
+Work on a copy in `programs\` (not in Git) so the samples stay as they are:
+
+```
+mkdir programs
+copy samples\valid_4_channel.json programs\my_test.json
+python run_menu.py --fake programs\my_test.json
+```
+
+1. Click channel 2's amplitude, type `2.5`, press Enter. The panel says
+   "Saved to my_test.json at ...". Run `type programs\my_test.json` in
+   another terminal to see the new value.
+2. Change channel 4's amplitude to `40`. It turns red, the problem is listed,
+   "Not saved: fix the values in red first" appears, and Run is greyed out.
+   `type programs\my_test.json` still shows the old value.
+3. Change it back to `2`: Passed, and saved again.
+
+### Sprint 3: New Program screen
+
+```
+python run_menu.py --fake
+```
+
+1. Click **New Program**. Channel 1 starts with the three starter blocks.
+2. Type a program name: "Validation: Passed. Ready to save."
+3. Click **+** for Channel 2, then drag **Pulse width** and **Amplitude**
+   from the palette onto it. The tab shows ⚠ and "Channel 2 frequency is
+   missing." is listed. Drag **Frequency** on to fix it.
+4. Right-click the Channel 1 tab, **Duplicate channel**: Channel 3 has the
+   same values. Drag tabs to reorder them; ✕ closes one.
+5. Set an amplitude to `40`: Save is disabled and the problem is listed.
+   Set it back, then **Save Program...**. The program opens on the Main
+   Menu, where its values can be edited live.
+
+### Sprint 3: MATLAB stim matrix (total time, channels, time step)
+
+Import a file in the client's layout (rows = total time / time step + 1,
+columns = channels x parameters):
+
+```
+python -m validation samples\matlab\stim_matrix_3ch.mat
+python run_menu.py --fake samples\matlab\stim_matrix_3ch.mat
+```
+
+3 channels, 151 points each, "Validation: Passed".
+
+Build the same kind of program in the app:
+
+1. **New Program**, name it, set **Total time** `3`, **Active channels**
+   `3`, **Time step** `20`. The line under them says "151 time steps x 3
+   channels".
+2. On a channel's amplitude block, tick **ramp to** and enter `2`.
+3. **Export .mat...** writes the stim-matrix layout. Import it on the Main
+   Menu (or `load` it in MATLAB): `stim` is 151 x 9 (3 channels x pw, amp,
+   frequency).
+
+### Sprint 3: Prof. LaMack's layout (t, pw1, a1, freq1, pw2, ...)
+
+One variable per channel and parameter, in seconds, amps and Hz, as a
+`.mat` or a `.txt` file. Frequency can change over time.
+
+```
+python -m validation samples\matlab\per_channel_2ch.mat samples\matlab\per_channel_2ch.txt
+python run_menu.py --fake samples\matlab\per_channel_2ch.txt
+```
+
+Both **PASSED**: 2 channels, 501 points, 10 s at a 20 ms step. On the Main
+Menu, channel 1 shows pulse width `50 – 100`, amplitude `0 – 2`, frequency
+`20 – 30`; the description says the values were read as seconds and amps.
+
+1. **Connect** in the status bar, then **Run / Execute...** and **Run**.
+2. Watch channel 2's frequency go from 25 to 30 Hz at t = 5 s; the log shows
+   `ipi` changing.
+3. A 1 ms time step (like the email's example) imports fine but fails the
+   **placeholder** time step minimum (10 ms) until COSMIIC confirms the limits.
+
 ---
 
 ## 4. Test Pulse Window options
@@ -422,6 +499,7 @@ Confirm the values with COSMIIC before using real hardware.
 | `python -m pytest tests\test_range_table.py` | Safe range file and "refuses to start" |
 | `python -m pytest tests\test_wss_status_bar.py` | WSS status bar and channel count |
 | `python -m pytest tests\test_matlab_import.py` | MATLAB / CSV import and time-series checks |
+| `python -m pytest tests\test_per_channel_import.py` | t, pw1, a1, freq1 layout (.mat / .txt / .csv) and frequency over time |
 | `python -m pytest tests\test_execution.py` | Run / Execute screen and its safety rules |
 | `python -m pytest tests\test_pulse_window_gui.py` | Test Pulse Window |
 | `python -m pytest -k disconnect` | Only tests with "disconnect" in the name |

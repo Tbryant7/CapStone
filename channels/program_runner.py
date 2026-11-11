@@ -219,13 +219,16 @@ def build_frames(program: Any) -> list[Frame]:
     """One Frame per time step (time-series programs) or a single Frame.
 
     Channels without a time series hold their constant values at every step.
+    A point's own frequency (frequency that changes over time) is used when
+    it has one; otherwise the channel's.
     """
     channels = list(getattr(program, "channels", None) or [])
     if not channels:
         return []
     longest = max((len(c.time_series) for c in channels), default=0)
     if longest == 0:
-        return [Frame(0, 0.0, [_command(c, c.pulse_width_us, c.amplitude_ma) for c in channels])]
+        return [Frame(0, 0.0, [_command(c, c.pulse_width_us, c.amplitude_ma, c.frequency_hz)
+                               for c in channels])]
 
     timeline = max(channels, key=lambda c: len(c.time_series)).time_series
     frames = []
@@ -234,15 +237,17 @@ def build_frames(program: Any) -> list[Frame]:
         for c in channels:
             if c.time_series:
                 point = c.time_series[min(index, len(c.time_series) - 1)]
-                commands.append(_command(c, point.pulse_width_us, point.amplitude_ma))
+                frequency = getattr(point, "frequency_hz", None)
+                if frequency is None:
+                    frequency = c.frequency_hz  # frequency doesn't change over time
+                commands.append(_command(c, point.pulse_width_us, point.amplitude_ma, frequency))
             else:
-                commands.append(_command(c, c.pulse_width_us, c.amplitude_ma))
+                commands.append(_command(c, c.pulse_width_us, c.amplitude_ma, c.frequency_hz))
         frames.append(Frame(index, float(timeline[index].time_s), commands))
     return frames
 
 
-def _command(channel: Any, pulse_width: Any, amplitude: Any) -> ChannelCommand:
-    frequency = channel.frequency_hz
+def _command(channel: Any, pulse_width: Any, amplitude: Any, frequency: Any) -> ChannelCommand:
     if not (isinstance(frequency, (int, float)) and math.isfinite(frequency) and frequency > 0):
         frequency = 1.0  # only reachable for programs that failed validation
     return ChannelCommand(int(channel.number), pulse_width, amplitude, float(frequency))

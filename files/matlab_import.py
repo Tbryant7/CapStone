@@ -12,12 +12,22 @@ is raised with every problem listed, and no program is returned.
 
 Expected layout (see docs/MATLAB_IMPORT.md and samples/matlab/):
 
-.mat, saved from MATLAB with ``save(file, ..., '-v7')`` (the default):
+.mat, saved from MATLAB with ``save(file, ..., '-v7')`` (the default), or
+.txt, in any of three layouts:
 
-    time_s          N values, seconds from the start, one fixed step apart
+* one variable per channel and parameter, as in Prof. LaMack's example:
+  ``t``, ``pw1``, ``a1``, ``freq1``, ``pw2``, ... in seconds, amps and Hz by
+  default (see ``files/per_channel.py``),
+
+* one ``stim`` matrix, rows = time steps and columns = channels x
+  parameters, with ``total_time_s``, ``num_channels`` and optionally
+  ``time_step_ms`` (see ``files/stim_matrix.py``), or
+* separate variables:
+
+    time_s         N values, seconds from the start, one fixed step apart
     amplitude_ma    N x C (one column per channel), or 1 x C / scalar if constant
     pulse_width_us  N x C, or 1 x C / scalar if constant
-    frequency_hz    1 x C, or a scalar for all channels
+    frequency_hz    N x C if it changes over time, or 1 x C / a scalar
     channels        optional 1 x C channel numbers (default 1..C)
     name            optional text
     description     optional text
@@ -25,6 +35,12 @@ Expected layout (see docs/MATLAB_IMPORT.md and samples/matlab/):
 .csv, header row then one row per time step:
 
     time_s, ch1_amplitude_ma, ch1_pulse_width_us, ch1_frequency_hz, ch2_amplitude_ma, ...
+
+or with the per-channel names (``t, pw1, a1, freq1, pw2, ...``).
+
+.txt, either ``name = v1, v2, v3, ...`` lines (one variable per line, as in
+Prof. LaMack's email) or a table: a header row of names, then one row of
+numbers per time step (separated by commas, tabs or spaces).
 
 Short variable names are accepted too (``t``/``time``, ``amplitude``/``amp``,
 ``pulse_width``/``pw``, ``frequency``/``freq``).
@@ -40,8 +56,10 @@ from typing import Any
 
 from .program import Channel, Program, TimeSeriesPoint
 from .program_file_manager import ProgramFileError
+from .per_channel import has_per_channel, read_per_channel
+from .stim_matrix import MAX_ROWS, has_matrix, read_matrix
 
-IMPORT_SUFFIXES = (".mat", ".csv")
+IMPORT_SUFFIXES = (".mat", ".csv", ".txt")
 
 #: Accepted names for each field, first one is the documented name.
 ALIASES = {
@@ -63,7 +81,7 @@ LABELS = {
 
 
 def import_time_series(path: Path | str) -> Program:
-    """Read a .mat or .csv time-series file into a Program. All or nothing."""
+    """Read a .mat, .csv or .txt time-series file into a Program. All or nothing."""
     path = Path(path)
     if not path.is_file():
         raise ProgramFileError(f"File not found: {path}")
@@ -72,7 +90,9 @@ def import_time_series(path: Path | str) -> Program:
         return _from_mat(path)
     if suffix == ".csv":
         return _from_csv(path)
-    raise ProgramFileError(f"{path.name}: only .mat and .csv files can be imported.")
+    if suffix == ".txt":
+        return _from_txt(path)
+    raise ProgramFileError(f"{path.name}: only .mat, .csv and .txt files can be imported.")
 
 
 # ---------------------------------------------------------------- .mat
@@ -98,6 +118,34 @@ def _from_mat(path: Path) -> Program:
         raise ProgramFileError(f"{path.name} is not a readable MATLAB file ({ex}).") from None
 
     data = {k: v for k, v in raw.items() if not k.startswith("__")}
+    return _from_variables(path, data, np)
+
+
+def _from_variables(path: Path, data: dict, np) -> Program:
+    """Any of the three layouts, from variables read out of a .mat or .txt file."""
+    # One stim matrix: rows = time steps, columns = channels x parameters
+    # (files/stim_matrix.py).
+    if has_matrix(data):
+        times, columns, problems = read_matrix(data, np)
+        if problems:
+            _fail(path, problems, sorted(data))
+        return _build_program(
+            path, times, columns,
+            _text(_pick(data, "name")) or path.stem,
+            _text(_pick(data, "description")) or f"Imported from {path.name}",
+        )
+
+    # One variable per channel and parameter: t, pw1, a1, freq1, pw2, ...
+    if has_per_channel(data):
+        times, columns, problems, note = read_per_channel(data, np, MAX_ROWS)
+        if problems:
+            _fail(path, problems, sorted(data))
+        return _build_program(
+            path, times, columns,
+            _text(_pick(data, "name")) or path.stem,
+            _text(_pick(data, "description")) or f"Imported from {path.name} ({note})",
+        )
+
     problems: list[str] = []
     found = {field: _pick(data, field) for field in ALIASES}
 
@@ -122,7 +170,7 @@ def _from_mat(path: Path) -> Program:
                     f"{LABELS[field]} has {m.shape[1]} columns but the data has {c} channels "
                     "(use one column per channel, or a single value for all)."
                 )
-        frequency = _per_channel(found["frequency_hz"], "frequency_hz", c, problems, np)
+        frequency = _frequencies(found["frequency_hz"], c, n, problems, np)
         numbers = _channel_numbers(found["channels"], c, problems, np)
         if c and not problems:
             columns = []
@@ -190,6 +238,21 @@ def _matrix(value, field, n, problems, np):
         problems.append(f"{LABELS[field]} has empty (NaN) or infinite values.")
         return None
     return arr
+
+
+def _frequencies(value, c, n, problems, np):
+    """frequency_hz: N x C (changes over time), or 1 x C / a scalar."""
+    if value is not None:
+        arr = np.asarray(value)
+        if arr.ndim == 2 and n > 1 and n in arr.shape and arr.size >= n:
+            m = _matrix(value, "frequency_hz", n, problems, np)
+            if m is None:
+                return [None] * c
+            if m.shape[1] not in (1, c):
+                problems.append(f"{LABELS['frequency_hz']} has {m.shape[1]} columns but the data has {c} channels.")
+                return [None] * c
+            return [_column(m, k, n) for k in range(c)]
+    return _per_channel(value, "frequency_hz", c, problems, np)
 
 
 def _per_channel(value, field, c, problems, np):
@@ -277,6 +340,8 @@ def _from_csv(path: Path) -> Program:
         _fail(path, ["The file needs a header row and at least one row of data."])
 
     header = [h.strip().lower() for h in rows[0]]
+    if not any(_CSV_COLUMN.match(h) for h in header) and any(has_per_channel({h: 0}) for h in header):
+        return _from_table(path, rows)
     problems: list[str] = []
     time_col = next((i for i, h in enumerate(header) if h in ALIASES["time_s"]), None)
     if time_col is None:
@@ -322,12 +387,9 @@ def _from_csv(path: Path) -> Program:
 
     columns = []
     for ch, cols in sorted(by_channel.items()):
-        freqs = {v[cols["frequency_hz"]] for v in values}
-        if len(freqs) > 1:
-            problems.append(f"ch{ch}_frequency_hz must be the same on every row.")
         columns.append({
             "number": ch,
-            "frequency_hz": values[0][cols["frequency_hz"]],
+            "frequency_hz": [v[cols["frequency_hz"]] for v in values],  # may change over time
             "amplitude_ma": [v[cols["amplitude_ma"]] for v in values],
             "pulse_width_us": [v[cols["pulse_width_us"]] for v in values],
         })
@@ -338,6 +400,121 @@ def _from_csv(path: Path) -> Program:
     )
 
 
+# ---------------------------------------------------------------- .txt
+
+_SPLIT = re.compile(r"[\s,;\[\]]+")
+_ASSIGN = re.compile(r"^\s*([A-Za-z][\w]*)\s*[=:]\s*(.*)$")
+
+
+def _from_txt(path: Path) -> Program:
+    """``name = 1, 2, 3`` lines, or a table with a header row."""
+    try:
+        import numpy as np
+    except ImportError:
+        raise ProgramFileError("Importing needs numpy. Run: pip install -r requirements.txt") from None
+    try:
+        text = path.read_text(encoding="utf-8-sig")
+    except UnicodeDecodeError:
+        raise ProgramFileError(f"{path.name} is not a text file.") from None
+    except OSError as ex:
+        raise ProgramFileError(f"Could not read {path.name}: {ex}") from None
+
+    lines = [_strip_comment(line) for line in text.splitlines()]
+    lines = [line for line in lines if line.strip()]
+    if not lines:
+        _fail(path, ["The file is empty."])
+    if not _ASSIGN.match(lines[0]):
+        rows = [[cell for cell in re.split(r"[,\t; ]+", line.strip()) if cell] for line in lines]
+        return _from_table(path, rows)
+
+    data: dict[str, Any] = {}
+    texts: dict[str, list[str]] = {}
+    raw: dict[str, list[str]] = {}
+    problems: list[str] = []
+    name = None
+    for number, line in enumerate(lines, start=1):
+        m = _ASSIGN.match(line)
+        if m:
+            name, rest = m.group(1), m.group(2)
+            if name in data or name in texts:
+                problems.append(f"{name} is given twice (line {number}).")
+            data[name], texts[name], raw[name] = [], [], []
+        elif name is None:
+            problems.append(f"Line {number} doesn't start with a name (e.g. t = 0, 0.001, ...).")
+            continue
+        else:
+            rest = line  # values carried on to the next line
+        raw[name].append(rest.strip())
+        for token in _SPLIT.split(rest.strip()):
+            token = token.strip().strip("'\"")
+            if not token:
+                continue
+            if token.strip(".…") == "":
+                problems.append(f"{name} contains '{token}': every value must be written out.")
+                continue
+            try:
+                data[name].append(float(token))
+            except ValueError:
+                texts[name].append(token)
+    if problems:
+        _fail(path, problems)
+    variables: dict[str, Any] = {}
+    for key, numbers in data.items():
+        if texts[key] and not numbers:
+            variables[key] = " ".join(raw[key]).strip().strip("'\"")  # name, description, units
+        elif texts[key]:
+            problems.append(f"{key}: {texts[key][0]!r} is not a number.")
+        else:
+            variables[key] = np.array([numbers])
+    if problems:
+        _fail(path, problems)
+    return _from_variables(path, variables, np)
+
+
+def _strip_comment(line: str) -> str:
+    for mark in ("%", "#", "//"):
+        if mark in line:
+            line = line[:line.index(mark)]
+    return line
+
+
+def _from_table(path: Path, rows: list[list[str]]) -> Program:
+    """Header row of variable names, then one row of numbers per time step."""
+    import numpy as np
+
+    header = [h.strip() for h in rows[0]]
+    body = [r for r in rows[1:] if any(c.strip() for c in r)]
+    problems: list[str] = []
+    if not body:
+        _fail(path, ["The file needs a header row and at least one row of numbers."])
+    values = []
+    for line, row in enumerate(body, start=2):
+        if len(row) != len(header):
+            problems.append(f"Row {line} has {len(row)} values but the header has {len(header)} names.")
+        else:
+            try:
+                values.append([float(cell) for cell in row])
+            except ValueError:
+                bad = next(c for c in row if not _is_float(c))
+                problems.append(f"Row {line}: {bad.strip()!r} is not a number.")
+        if len(problems) >= 10:
+            problems.append("More rows have problems.")
+            break
+    if problems:
+        _fail(path, problems)
+    table = np.array(values, dtype=float)
+    data = {name: table[:, i].reshape(1, -1) for i, name in enumerate(header)}
+    return _from_variables(path, data, np)
+
+
+def _is_float(text: str) -> bool:
+    try:
+        float(text)
+        return True
+    except ValueError:
+        return False
+
+
 # ---------------------------------------------------------------- shared
 
 
@@ -345,15 +522,20 @@ def _build_program(path: Path, times: list[float], columns: list[dict], name: st
     step_ms = _time_step_ms(times)
     channels = []
     for col in columns:
+        frequency = col["frequency_hz"]
+        if isinstance(frequency, (list, tuple)) and len(set(frequency)) == 1:
+            frequency = frequency[0]  # the same all the way down: keep it on the channel
+        changing = isinstance(frequency, (list, tuple))
         points = [
-            TimeSeriesPoint(time_s=t, pulse_width_us=pw, amplitude_ma=amp)
-            for t, pw, amp in zip(times, col["pulse_width_us"], col["amplitude_ma"])
+            TimeSeriesPoint(time_s=t, pulse_width_us=pw, amplitude_ma=amp,
+                            frequency_hz=frequency[i] if changing else None)
+            for i, (t, pw, amp) in enumerate(zip(times, col["pulse_width_us"], col["amplitude_ma"]))
         ]
         channels.append(Channel(
             number=col["number"],
             pulse_width_us=points[0].pulse_width_us,
             amplitude_ma=points[0].amplitude_ma,
-            frequency_hz=col["frequency_hz"],
+            frequency_hz=frequency[0] if changing else frequency,
             time_series=points,
         ))
     return Program(name=name, description=description, time_step_ms=step_ms, channels=channels)
