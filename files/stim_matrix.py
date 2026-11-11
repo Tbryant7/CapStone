@@ -22,7 +22,8 @@ The parameter order is set by ``parameters`` (e.g. ``{'pulse_width_us',
 channel decides: 1 = amplitude, 2 = pulse width + amplitude,
 3 = pulse width + amplitude + frequency. A parameter that isn't in the matrix
 comes from its own variable instead (one value, or one per channel), e.g.
-``frequency_hz = 20``. ``column_order = 'parameter'`` groups the columns by
+``frequency_hz = 20``. Every parameter in the matrix, frequency included,
+may change from row to row. ``column_order = 'parameter'`` groups the columns by
 parameter instead ([all channels' pulse widths, all amplitudes, ...]).
 
 Optional: ``channels`` (channel numbers, default 1..num_channels), ``name``,
@@ -158,12 +159,7 @@ def read_matrix(data: dict, np) -> tuple[list[float], list[dict], list[str]]:
             if name not in values:
                 values[name] = [constants[name][k]] * rows
         if "frequency_hz" in values:
-            freqs = set(values["frequency_hz"])
-            if len(freqs) > 1:
-                problems.append(
-                    f"Channel {k + 1} frequency changes over time; it must stay the same in every row."
-                )
-            frequency = values["frequency_hz"][0]
+            frequency = values["frequency_hz"]  # may change from row to row
         else:
             frequency = constants["frequency_hz"][k]
         columns.append({
@@ -196,9 +192,11 @@ def matrix_variables(program: Program) -> dict[str, Any]:
         if ch.time_series:
             pw = [p.pulse_width_us for p in ch.time_series]
             amp = [p.amplitude_ma for p in ch.time_series]
+            freq = [p.frequency(ch) for p in ch.time_series]
         else:
             pw, amp = [ch.pulse_width_us] * rows, [ch.amplitude_ma] * rows
-        columns += [pw, amp, [ch.frequency_hz] * rows]
+            freq = [ch.frequency_hz] * rows
+        columns += [pw, amp, freq]
     stim = np.array(columns, dtype=float).T.reshape(rows, 3 * len(program.channels))
     return {
         "stim": stim,

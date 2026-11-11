@@ -373,8 +373,8 @@ class MainMenuWindow(QMainWindow):
             self,
             "Import Program / MATLAB File",
             str(SAMPLES_FOLDER) if SAMPLES_FOLDER.is_dir() else "",
-            "Program Files (*.json *.mat *.csv);;JSON Files (*.json);;"
-            "MATLAB Files (*.mat);;CSV Files (*.csv)",
+            "Program Files (*.json *.mat *.csv *.txt);;JSON Files (*.json);;"
+            "MATLAB Files (*.mat);;CSV Files (*.csv);;Text Files (*.txt)",
         )
 
         if not file_path:

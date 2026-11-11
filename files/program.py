@@ -11,7 +11,9 @@ time step in milliseconds.
 
 A channel may also carry a time series (``"time_series"``: a list of
 ``{"time_s", "pulse_width_us", "amplitude_ma"}`` points, ``time_step_ms``
-apart), e.g. from a MATLAB import (``files/matlab_import.py``).
+apart), e.g. from a MATLAB import (``files/matlab_import.py``). A point may
+also have its own ``"frequency_hz"`` when the frequency changes over time;
+without it the point uses the channel's ``frequency_hz``.
 
 JSON shape (``to_dict`` / ``from_dict``)::
 
@@ -45,13 +47,19 @@ class TimeSeriesPoint:
     time_s: Any = None
     pulse_width_us: Any = None
     amplitude_ma: Any = None
+    #: Optional. ``None`` means "use the channel's frequency_hz"; set when the
+    #: frequency changes over time (e.g. freq1 in an imported file).
+    frequency_hz: Any = None
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        data = {
             "time_s": self.time_s,
             "pulse_width_us": self.pulse_width_us,
             "amplitude_ma": self.amplitude_ma,
         }
+        if self.frequency_hz is not None:  # older files keep their exact shape
+            data["frequency_hz"] = self.frequency_hz
+        return data
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "TimeSeriesPoint":
@@ -59,7 +67,12 @@ class TimeSeriesPoint:
             time_s=data.get("time_s"),
             pulse_width_us=data.get("pulse_width_us"),
             amplitude_ma=data.get("amplitude_ma"),
+            frequency_hz=data.get("frequency_hz"),
         )
+
+    def frequency(self, channel: "Channel") -> Any:
+        """This point's frequency: its own, or else the channel's."""
+        return self.frequency_hz if self.frequency_hz is not None else channel.frequency_hz
 
 
 @dataclass

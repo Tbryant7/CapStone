@@ -369,6 +369,26 @@ Build the same kind of program in the app:
    Menu (or `load` it in MATLAB): `stim` is 151 x 9 (3 channels x pw, amp,
    frequency).
 
+### Sprint 3: Prof. LaMack's layout (t, pw1, a1, freq1, pw2, ...)
+
+One variable per channel and parameter, in seconds, amps and Hz, as a
+`.mat` or a `.txt` file. Frequency can change over time.
+
+```
+python -m validation samples\matlab\per_channel_2ch.mat samples\matlab\per_channel_2ch.txt
+python run_menu.py --fake samples\matlab\per_channel_2ch.txt
+```
+
+Both **PASSED**: 2 channels, 501 points, 10 s at a 20 ms step. On the Main
+Menu, channel 1 shows pulse width `50 – 100`, amplitude `0 – 2`, frequency
+`20 – 30`; the description says the values were read as seconds and amps.
+
+1. **Connect** in the status bar, then **Run / Execute...** and **Run**.
+2. Watch channel 2's frequency go from 25 to 30 Hz at t = 5 s; the log shows
+   `ipi` changing.
+3. A 1 ms time step (like the email's example) imports fine but fails the
+   **placeholder** time step minimum (10 ms) until COSMIIC confirms the limits.
+
 ---
 
 ## 4. Test Pulse Window options
@@ -479,6 +499,7 @@ Confirm the values with COSMIIC before using real hardware.
 | `python -m pytest tests\test_range_table.py` | Safe range file and "refuses to start" |
 | `python -m pytest tests\test_wss_status_bar.py` | WSS status bar and channel count |
 | `python -m pytest tests\test_matlab_import.py` | MATLAB / CSV import and time-series checks |
+| `python -m pytest tests\test_per_channel_import.py` | t, pw1, a1, freq1 layout (.mat / .txt / .csv) and frequency over time |
 | `python -m pytest tests\test_execution.py` | Run / Execute screen and its safety rules |
 | `python -m pytest tests\test_pulse_window_gui.py` | Test Pulse Window |
 | `python -m pytest -k disconnect` | Only tests with "disconnect" in the name |

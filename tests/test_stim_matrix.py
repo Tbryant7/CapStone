@@ -154,8 +154,6 @@ def _variant(tmp_path, **changes):
     ({"num_channels": 2.5}, "num_channels must be a whole number"),
     ({"frequency_hz": None}, "frequency_hz is missing"),
     ({"stim": np.ones((101, 8))}, "4 columns per channel"),
-    ({"stim": np.column_stack([np.ones(101), np.ones(101), np.arange(101.0)] * 2)},
-     "Channel 1 frequency changes over time"),
     ({"parameters": np.array(["pw", "volts"], dtype=object)}, '"volts" is not a stimulation parameter'),
     ({"stim": np.full((101, 4), np.nan)}, "stim has empty (NaN) or infinite values"),
 ])
