@@ -61,7 +61,31 @@ def main() -> None:
         "pulse_width_us": np.array([[50.0]]),
         "name": "Missing frequency (demo)",
     }, format="5")
+    stim_matrix_sample()
     print(f"Wrote samples to {OUT}")
+
+
+def stim_matrix_sample() -> None:
+    """The stim-matrix layout (files/stim_matrix.py), as make_stim_matrix.m writes it.
+
+    3 s at a 20 ms step -> 151 rows; 3 channels x (pulse width, amplitude) -> 6 columns.
+    """
+    total, step_ms, n_channels = 3.0, 20.0, 3
+    t = np.round(np.arange(int(round(total * 1000 / step_ms)) + 1) * step_ms / 1000, 6)
+    columns = []
+    for ch in range(n_channels):
+        start = ch * 0.5                                            # each channel starts 0.5 s later
+        columns += [np.full(t.size, 50.0),                          # pulse width, us
+                    np.round(np.clip((t - start) / 1.5, 0, 1) * 2.0, 4)]   # ramp to 2 mA over 1.5 s
+    savemat(OUT / "stim_matrix_3ch.mat", {
+        "stim": np.column_stack(columns),
+        "total_time_s": total,
+        "num_channels": float(n_channels),
+        "time_step_ms": step_ms,
+        "frequency_hz": 20.0,
+        "name": "Three channel stim matrix (demo)",
+        "description": "Rows = total time / time step + 1, columns = channels x (pw, amp).",
+    }, format="5")
 
 
 if __name__ == "__main__":

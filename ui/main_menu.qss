@@ -155,3 +155,16 @@ QPushButton#runProgramButton:disabled {
     border-color: #bdbdbd;
     color: #9e9e9e;
 }
+
+/* Number and text inputs (value editors, New Program screen) */
+QLineEdit, QSpinBox, QDoubleSpinBox {
+    background-color: #ffffff;
+    color: #222222;
+    border: 1px solid #888888;
+    border-radius: 3px;
+    padding: 2px 4px;
+}
+
+QLineEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus {
+    border: 2px solid #4d83b7;
+}

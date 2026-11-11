@@ -106,11 +106,23 @@ def test_unsafe_sample_lists_failing_values(window):
     assert "out of range" not in cell(window, 1, 1)
 
 
-def test_panel_is_read_only(window):
-    from PySide6.QtWidgets import QAbstractItemView
+def test_panel_values_are_editable_but_channel_numbers_are_not(window):
+    from PySide6.QtCore import Qt
 
     window.open_program_file(SAMPLES / "valid_1_channel.json")
-    assert window.program_panel.table.editTriggers() == QAbstractItemView.NoEditTriggers
+    table = window.program_panel.table
+    assert not table.item(0, 0).flags() & Qt.ItemIsEditable          # channel number
+    for column in (1, 2, 3):                                          # pw, amplitude, frequency
+        assert table.item(0, column).flags() & Qt.ItemIsEditable
+
+
+def test_panel_without_file_manager_is_read_only(app):
+    from PySide6.QtWidgets import QAbstractItemView
+
+    from ui.program_panel import ProgramPanel
+
+    panel = ProgramPanel(TEST_RANGES)
+    assert panel.table.editTriggers() == QAbstractItemView.NoEditTriggers
 
 
 @pytest.mark.parametrize("name", ["missing_amplitude.json", "truncated.json"])

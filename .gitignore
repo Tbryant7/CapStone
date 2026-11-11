@@ -17,3 +17,6 @@ logs/
 
 # Each person's own recent programs list (written by the Main Menu)
 config/recent_programs.json
+
+# Programs people build with the New Program screen
+programs/
