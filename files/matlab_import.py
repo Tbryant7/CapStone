@@ -12,9 +12,15 @@ is raised with every problem listed, and no program is returned.
 
 Expected layout (see docs/MATLAB_IMPORT.md and samples/matlab/):
 
-.mat, saved from MATLAB with ``save(file, ..., '-v7')`` (the default):
+.mat, saved from MATLAB with ``save(file, ..., '-v7')`` (the default), in
+either of two layouts:
 
-    time_s          N values, seconds from the start, one fixed step apart
+* one ``stim`` matrix, rows = time steps and columns = channels x
+  parameters, with ``total_time_s``, ``num_channels`` and optionally
+  ``time_step_ms`` (see ``files/stim_matrix.py``), or
+* separate variables:
+
+    time_s         N values, seconds from the start, one fixed step apart
     amplitude_ma    N x C (one column per channel), or 1 x C / scalar if constant
     pulse_width_us  N x C, or 1 x C / scalar if constant
     frequency_hz    1 x C, or a scalar for all channels
@@ -40,6 +46,7 @@ from typing import Any
 
 from .program import Channel, Program, TimeSeriesPoint
 from .program_file_manager import ProgramFileError
+from .stim_matrix import has_matrix, read_matrix
 
 IMPORT_SUFFIXES = (".mat", ".csv")
 
@@ -98,6 +105,19 @@ def _from_mat(path: Path) -> Program:
         raise ProgramFileError(f"{path.name} is not a readable MATLAB file ({ex}).") from None
 
     data = {k: v for k, v in raw.items() if not k.startswith("__")}
+
+    # One stim matrix: rows = time steps, columns = channels x parameters
+    # (files/stim_matrix.py).
+    if has_matrix(data):
+        times, columns, problems = read_matrix(data, np)
+        if problems:
+            _fail(path, problems, sorted(data))
+        return _build_program(
+            path, times, columns,
+            _text(_pick(data, "name")) or path.stem,
+            _text(_pick(data, "description")) or f"Imported from {path.name}",
+        )
+
     problems: list[str] = []
     found = {field: _pick(data, field) for field in ALIASES}
 

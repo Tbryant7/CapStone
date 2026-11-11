@@ -347,6 +347,28 @@ python run_menu.py --fake
    Set it back, then **Save Program...**. The program opens on the Main
    Menu, where its values can be edited live.
 
+### Sprint 3: MATLAB stim matrix (total time, channels, time step)
+
+Import a file in the client's layout (rows = total time / time step + 1,
+columns = channels x parameters):
+
+```
+python -m validation samples\matlab\stim_matrix_3ch.mat
+python run_menu.py --fake samples\matlab\stim_matrix_3ch.mat
+```
+
+3 channels, 151 points each, "Validation: Passed".
+
+Build the same kind of program in the app:
+
+1. **New Program**, name it, set **Total time** `3`, **Active channels**
+   `3`, **Time step** `20`. The line under them says "151 time steps x 3
+   channels".
+2. On a channel's amplitude block, tick **ramp to** and enter `2`.
+3. **Export .mat...** writes the stim-matrix layout. Import it on the Main
+   Menu (or `load` it in MATLAB): `stim` is 151 x 9 (3 channels x pw, amp,
+   frequency).
+
 ---
 
 ## 4. Test Pulse Window options

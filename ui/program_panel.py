@@ -9,7 +9,8 @@ change it, press Enter. Every change is validated straight away, and the
 file is saved as soon as every value passes. A change that fails validation
 is never written (REQ-17): the file keeps its last safe values until the
 problem is fixed. Programs imported from MATLAB / CSV can't be written back,
-so they are saved with "Save as JSON...".
+so they are saved with "Save as JSON...". Files in samples/ are reference
+files: edits to them stay in the app until "Save a copy...".
 
     panel = ProgramPanel(ranges, file_manager)
     panel.show_program(file_manager.open(path))
@@ -55,6 +56,14 @@ EDIT_MAX = 100000
 
 #: Item data role holding the real number behind a cell's text.
 VALUE_ROLE = Qt.UserRole
+
+ROOT = Path(__file__).resolve().parent.parent
+
+#: Reference files: edits are never written back here (use Save a copy).
+SAMPLES_FOLDER = ROOT / "samples"
+
+#: Where "Save a copy" / "Save as JSON" suggest saving (not in Git).
+PROGRAMS_FOLDER = ROOT / "programs"
 
 EMPTY_TEXT = "No program open. Use Import Program to open a program file (try the samples folder)."
 EDIT_HINT = "Click a value to change it, then press Enter. Saved values must pass validation."
@@ -183,11 +192,12 @@ class ProgramPanel(QGroupBox):
         self.save_as_button.setVisible(self.editable)
         # An import can only be kept as JSON; a JSON file can be copied to
         # build a new program off it without changing the original.
-        self.save_as_button.setText("Save a copy..." if self._writes_back() else "Save as JSON...")
-        if self.editable and not self._writes_back():
+        self.save_as_button.setText(self._save_as_text())
+        reason = self._read_only_reason()
+        if self.editable and reason:
             self._set_save_status(
-                f"Imported from {opened.path.name}. Changes stay in the app "
-                "until you use Save as JSON.", ok=True,
+                f"Changes stay in the app ({reason}). Use {self._save_as_text()} to keep them.",
+                ok=True,
             )
         else:
             self.save_status_label.clear()
@@ -198,6 +208,9 @@ class ProgramPanel(QGroupBox):
         if self.opened is None or self.file_manager is None:
             return False
         suggested = self.opened.path.with_suffix(".json")
+        if self._read_only_reason():
+            PROGRAMS_FOLDER.mkdir(parents=True, exist_ok=True)
+            suggested = PROGRAMS_FOLDER / suggested.name
         path, _ = QFileDialog.getSaveFileName(
             self, "Save program as JSON", str(suggested), "JSON Files (*.json)"
         )
@@ -247,9 +260,10 @@ class ProgramPanel(QGroupBox):
         self.opened = OpenedProgram(program, result, path)
         self._render()
 
-        if not self._writes_back():
+        reason = self._read_only_reason()
+        if reason:
             self._set_save_status(
-                f"Changed, not saved: {path.name} is an import. Use Save as JSON to keep it.",
+                f"Changed, not saved: {reason}. Use {self._save_as_text()} to keep it.",
                 ok=False,
             )
         elif not result.is_valid:
@@ -266,8 +280,23 @@ class ProgramPanel(QGroupBox):
                 self._set_save_status(f"Saved to {path.name} at {_now()}.", ok=True)
         self.program_edited.emit(self.opened)
 
+    def _read_only_reason(self) -> str:
+        """Why edits aren't written to the opened file, or "" if they are."""
+        if self.opened is None:
+            return ""
+        path = self.opened.path
+        if path.suffix.lower() != ".json":
+            return f"{path.name} is an import"
+        if _inside(path, SAMPLES_FOLDER):
+            return f"{path.name} is a sample, and samples are kept as they are"
+        return ""
+
     def _writes_back(self) -> bool:
-        return self.opened is not None and self.opened.path.suffix.lower() == ".json"
+        return self.opened is not None and not self._read_only_reason()
+
+    def _save_as_text(self) -> str:
+        imported = self.opened is not None and self.opened.path.suffix.lower() != ".json"
+        return "Save as JSON..." if imported else "Save a copy..."
 
     def _set_save_status(self, text: str, ok: bool) -> None:
         self.save_status_label.setText(text)
@@ -444,3 +473,11 @@ def _format(value) -> str:
 
 def _escape(text: str) -> str:
     return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
+def _inside(path: Path, folder: Path) -> bool:
+    try:
+        Path(path).resolve().relative_to(folder.resolve())
+    except (OSError, ValueError):
+        return False
+    return True

@@ -173,9 +173,17 @@ new file for each change. A value that fails validation is shown in red but
   tab closes it, drag tabs to reorder, right-click a tab to **Duplicate
   channel** and build a new one off it. Each tab sets its WSS channel number.
   Tabs with a missing or unsafe value show ⚠.
+* **Total time, Active channels, Time step**: the same three settings a
+  MATLAB stimulation file is built from. With a total time, each channel
+  gets `total time / time step + 1` values, and pulse width and amplitude
+  blocks can **ramp to** an end value over the total time. **Export .mat...**
+  writes the MATLAB stim-matrix layout (see docs/MATLAB_IMPORT.md), which the
+  Main Menu imports again.
 * The whole program is validated on every change; **Save Program...** is
   enabled only when it passes. Programs save to `programs/` by default (not
   in Git). After saving, the program opens on the Main Menu, ready to edit.
+* Files in `samples/` are kept as they are: editing one on the Main Menu
+  changes it in the app only, and **Save a copy...** keeps your version.
 
 The Recent Stimulation Programs list is saved in
 `config/recent_programs.json`. That file is per person and is not in Git
