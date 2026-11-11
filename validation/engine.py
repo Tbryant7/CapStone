@@ -113,6 +113,8 @@ class ValidationEngine:
             missing, not_numbers, low, high = [], [], [], []
             for number, point in enumerate(points, start=1):
                 value = getattr(point, attribute)
+                if value is None and attribute in OPTIONAL_POINT_ATTRIBUTES:
+                    continue  # uses the channel's value, checked above
                 if value is None:
                     missing.append(number)
                 elif not _is_number(value):
@@ -189,7 +191,11 @@ class ValidationEngine:
 TIME_SERIES_PARAMETERS = (
     ("pulse_width_us", "pulse_width"),
     ("amplitude_ma", "amplitude"),
+    ("frequency_hz", "frequency"),
 )
+
+#: Point attributes that may be left out (the channel's value is used).
+OPTIONAL_POINT_ATTRIBUTES = ("frequency_hz",)
 
 
 def _points(numbers: list) -> str:

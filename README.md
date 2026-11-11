@@ -192,9 +192,11 @@ program never shows up as a change in `git status`.
 
 ## MATLAB / CSV import (REQ-15)
 
-**Import Program / MATLAB File** on the Main Menu also opens `.mat` and
-`.csv` time-series files. Each channel gets a time series of pulse width and
-amplitude, and the ValidationEngine checks every point, the time step, and
+**Import Program / MATLAB File** on the Main Menu also opens `.mat`, `.csv`
+and `.txt` time-series files, including the layout from Prof. LaMack's email
+(`t, pw1, a1, freq1, pw2, ...` in seconds, amps and Hz). Each channel gets a
+time series of pulse width, amplitude and (if it changes) frequency, and the
+ValidationEngine checks every point, the time step, and
 that points are in order and evenly spaced. A file with anything missing is
 refused and nothing is half-loaded. The expected layout is in
 [docs/MATLAB_IMPORT.md](docs/MATLAB_IMPORT.md) (our proposal until the

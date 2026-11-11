@@ -440,7 +440,13 @@ def _cell_values(channel, attribute: str) -> list:
     points = getattr(channel, "time_series", None) or []
     if points and attribute in ("pulse_width_us", "amplitude_ma"):
         return [getattr(p, attribute) for p in points]
+    if points and attribute == "frequency_hz" and _frequency_changes(channel):
+        return [p.frequency(channel) for p in points]
     return [getattr(channel, attribute)]
+
+
+def _frequency_changes(channel) -> bool:
+    return any(getattr(p, "frequency_hz", None) is not None for p in channel.time_series)
 
 
 def _format_span(values: list) -> str:
@@ -463,7 +469,9 @@ def _time_series_summary(program) -> str:
     step_text = f", {_format(step)} ms step" if isinstance(step, (int, float)) else ""
     return (
         f"Time series: {len(points)} points per channel{span}{step_text}. "
-        "Pulse width and amplitude show the lowest – highest value over time."
+        + ("Pulse width, amplitude and frequency show"
+           if any(_frequency_changes(c) for c in counted) else "Pulse width and amplitude show")
+        + " the lowest – highest value over time."
     )
 
 

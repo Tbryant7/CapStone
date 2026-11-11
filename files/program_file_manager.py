@@ -137,11 +137,11 @@ class ProgramFileManager:
     def open(self, path: Path | str) -> OpenedProgram:
         """Load ``path`` and validate it. Raises :class:`ProgramFileError`.
 
-        ``.mat`` and ``.csv`` files are imported as time-series data
+        ``.mat``, ``.csv`` and ``.txt`` files are imported as time-series data
         (``files/matlab_import.py``, REQ-15) and validated the same way.
         """
         path = Path(path)
-        if path.suffix.lower() in (".mat", ".csv"):
+        if path.suffix.lower() in (".mat", ".csv", ".txt"):
             from .matlab_import import import_time_series
 
             program = import_time_series(path)
@@ -216,6 +216,9 @@ def _check_time_series(entry: dict, index: int, problems: list[str]) -> None:
         else:
             for key, label in POINT_FIELDS:
                 _check_number(point, key, f"Channel entry {index} time-series point {number} {label}", problems)
+            if point.get("frequency_hz") is not None:  # optional: frequency that changes over time
+                _check_number(point, "frequency_hz",
+                              f"Channel entry {index} time-series point {number} frequency", problems)
         if len(problems) - before >= 5:  # don't bury the user in thousands of lines
             problems.append(f"Channel entry {index}: more time-series points have problems.")
             return

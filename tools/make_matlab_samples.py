@@ -62,6 +62,7 @@ def main() -> None:
         "name": "Missing frequency (demo)",
     }, format="5")
     stim_matrix_sample()
+    per_channel_sample()
     print(f"Wrote samples to {OUT}")
 
 
@@ -86,6 +87,32 @@ def stim_matrix_sample() -> None:
         "name": "Three channel stim matrix (demo)",
         "description": "Rows = total time / time step + 1, columns = channels x (pw, amp).",
     }, format="5")
+
+
+def per_channel_sample() -> None:
+    """Prof. LaMack's layout: t, pw1, a1, freq1, pw2, a2, freq2 in s / A / Hz
+    (samples/matlab/make_per_channel.m). Frequency changes over time."""
+    t = np.round(np.arange(0, 10.0 + 1e-9, 0.020), 6)              # 10 s, 20 ms step
+    env = np.minimum(np.clip(t / 2, 0, 1), np.clip((10 - t) / 2, 0, 1))
+    variables = {
+        "t": t,
+        "pw1": np.round(0.0001 * (0.5 + 0.5 * env), 9),              # 50 -> 100 us, in seconds
+        "a1": np.round(0.002 * env, 9),                              # 0 -> 2 mA, in amps
+        "freq1": np.round(20 + 10 * env, 6),                         # 20 -> 30 Hz
+        "pw2": np.full_like(t, 0.00005),                             # 50 us
+        "a2": np.round(0.0015 * np.clip((t - 1) / 3, 0, 1) * (t < 8), 9),   # 0 -> 1.5 mA, off at 8 s
+        "freq2": np.where(t < 5, 25.0, 30.0),                        # 25 Hz, then 30 Hz
+    }
+    savemat(OUT / "per_channel_2ch.mat", {
+        **{k: v.reshape(-1, 1) for k, v in variables.items()},
+        "name": "Two channels, per-channel variables (demo)",
+        "description": "t, pw1, a1, freq1, pw2, a2, freq2 in seconds, amps and Hz. Frequency changes over time.",
+    }, format="5")
+    with open(OUT / "per_channel_2ch.txt", "w", encoding="utf-8") as handle:
+        handle.write("% Same data as per_channel_2ch.mat: seconds, amps, Hz\n")
+        handle.write("name = Two channels, text file (demo)\n")
+        for key, values in variables.items():
+            handle.write(f"{key} = " + ", ".join(f"{v:g}" for v in values) + "\n")
 
 
 if __name__ == "__main__":
