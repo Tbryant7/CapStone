@@ -312,6 +312,41 @@ After **Connect**, the bar says "not on this WSS: 3, 4" in red and
 **Run / Execute...** stays greyed out with the reason. Running on the real WSS is turned off until COSMIIC
 confirms the safe limits.
 
+### Sprint 3: Edit an open program (saves live)
+
+Work on a copy in `programs\` (not in Git) so the samples stay as they are:
+
+```
+mkdir programs
+copy samples\valid_4_channel.json programs\my_test.json
+python run_menu.py --fake programs\my_test.json
+```
+
+1. Click channel 2's amplitude, type `2.5`, press Enter. The panel says
+   "Saved to my_test.json at ...". Run `type programs\my_test.json` in
+   another terminal to see the new value.
+2. Change channel 4's amplitude to `40`. It turns red, the problem is listed,
+   "Not saved: fix the values in red first" appears, and Run is greyed out.
+   `type programs\my_test.json` still shows the old value.
+3. Change it back to `2`: Passed, and saved again.
+
+### Sprint 3: New Program screen
+
+```
+python run_menu.py --fake
+```
+
+1. Click **New Program**. Channel 1 starts with the three starter blocks.
+2. Type a program name: "Validation: Passed. Ready to save."
+3. Click **+** for Channel 2, then drag **Pulse width** and **Amplitude**
+   from the palette onto it. The tab shows ⚠ and "Channel 2 frequency is
+   missing." is listed. Drag **Frequency** on to fix it.
+4. Right-click the Channel 1 tab, **Duplicate channel**: Channel 3 has the
+   same values. Drag tabs to reorder them; ✕ closes one.
+5. Set an amplitude to `40`: Save is disabled and the problem is listed.
+   Set it back, then **Save Program...**. The program opens on the Main
+   Menu, where its values can be edited live.
+
 ---
 
 ## 4. Test Pulse Window options

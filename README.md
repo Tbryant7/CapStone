@@ -141,12 +141,41 @@ python run_menu.py samples/unsafe_amplitude.json   # open a program straight awa
 ```
 
 **Import Program** (or **Open Selected** on a recent program) opens a program
-file and shows it, read-only, at the bottom of the Main Menu: its name, each
+file and shows it at the bottom of the Main Menu: its name, each
 channel's pulse width, amplitude and frequency, and the validation result,
 "Passed" or each failing value in words. Out-of-range cells are also marked
 "out of range" in red. A damaged file shows an error and the panel keeps
-what it was showing. The panel (`ui/program_panel.py`) is a placeholder
-until the Beginner Editor arrives in Sprint 3.
+what it was showing.
+
+## Editing an opened program (Sprint 3)
+
+Click any pulse width, amplitude or frequency (or the time step), change it
+and press Enter. The program is re-validated straight away and **the file is
+saved immediately** when every value passes, so there is no need to make a
+new file for each change. A value that fails validation is shown in red but
+**never written**: the file keeps its last safe values until it is fixed
+(REQ-17). **Save a copy...** saves to a new file instead.
+
+* Channel numbers can't be edited here. Time-series values (MATLAB / CSV
+  imports) change over time, so only their frequency can be edited, and an
+  import is kept with **Save as JSON...**.
+* **Run / Execute...** runs a copy of the program as it was when opened;
+  editing afterwards does not change a run that's already set up.
+
+## New Program screen (Sprint 3)
+
+**New Program** on the Main Menu opens `editor/new_program_window.py`:
+
+* **Blocks**, like Scratch: drag Pulse width, Amplitude or Frequency (or
+  **Starter**, which adds all three) from the palette onto a channel, or
+  click a block to add it. Set each block's value; ✕ removes it.
+* **One tab per channel**, like browser tabs: **+** adds a channel, ✕ on a
+  tab closes it, drag tabs to reorder, right-click a tab to **Duplicate
+  channel** and build a new one off it. Each tab sets its WSS channel number.
+  Tabs with a missing or unsafe value show ⚠.
+* The whole program is validated on every change; **Save Program...** is
+  enabled only when it passes. Programs save to `programs/` by default (not
+  in Git). After saving, the program opens on the Main Menu, ready to edit.
 
 The Recent Stimulation Programs list is saved in
 `config/recent_programs.json`. That file is per person and is not in Git
