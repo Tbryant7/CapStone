@@ -27,6 +27,7 @@ from PySide6.QtWidgets import (
 from channels import channel_mismatch_message, program_channel_numbers, unavailable_channels
 from comms import CommunicationAdapter
 from files import ProgramFileError, ProgramFileManager
+from editor.advanced_editor import AdvancedEditor
 from ui.program_panel import ProgramPanel
 from ui.wss_status_bar import WssStatusBar
 
@@ -49,6 +50,8 @@ class MainMenuWindow(QMainWindow):
     ) -> None:
         super().__init__()
         self.adapter = adapter
+        self._advanced_mode = False
+        self._advanced_loaded = False
 
         self.setWindowTitle("COSMIIC - Main Menu")
         self.setMinimumSize(900, 820)
@@ -132,6 +135,7 @@ class MainMenuWindow(QMainWindow):
         right_panel.setSpacing(15)
 
         description_group = QGroupBox("Description")
+        self._description_group = description_group
         description_group.setFixedHeight(160)
 
         description_layout = QVBoxLayout(description_group)
@@ -177,13 +181,21 @@ class MainMenuWindow(QMainWindow):
         right_panel.addStretch()
 
         content_layout.addLayout(right_panel, 2)
-        body_layout.addLayout(content_layout, 1)
+        self._body_layout = body_layout
+        self._menu_widget = QWidget()
+        self._menu_widget.setLayout(content_layout)
+        body_layout.addWidget(self._menu_widget, 1)
 
         # The opened program: values can be edited and save to the file live
         self.program_panel = ProgramPanel(self.file_manager.engine.ranges, self.file_manager)
         self.program_panel.program_edited.connect(self._update_run_button)
         self.program_panel.program_saved_as.connect(self._remember_program)
         body_layout.addWidget(self.program_panel, 2)
+        self.advanced_editor = AdvancedEditor(self.file_manager)
+        self.advanced_editor.hide()
+        self.advanced_editor.changed.connect(lambda: self._update_run_button())
+        self.advanced_editor.program_saved.connect(self._remember_program)
+        body_layout.addWidget(self.advanced_editor, 2)
         self.new_program_window = None
 
         # Open the Execution / Status screen (SDS Screen 4) for this program.
@@ -214,10 +226,8 @@ class MainMenuWindow(QMainWindow):
             self.statusBar().showMessage("WSS: no connection set up (start with run_menu.py)")
 
         self._main_menu_page = root
-        self._advanced_page = self._build_advanced_page()
         self._pages = QStackedWidget()
         self._pages.addWidget(self._main_menu_page)
-        self._pages.addWidget(self._advanced_page)
         self.setCentralWidget(self._pages)
 
         # Load all styling from the separate QSS file
@@ -237,35 +247,26 @@ class MainMenuWindow(QMainWindow):
         self.import_button.clicked.connect(self._choose_program_file)
         self.open_button.clicked.connect(self._open_selected_program)
 
-    def _build_advanced_page(self) -> QWidget:
-        page = QWidget()
-        layout = QVBoxLayout(page)
-        layout.setContentsMargins(0, 0, 0, 0)
-
-        title = QLabel("Advanced Mode")
-        title.setObjectName("mainHeader")
-        title.setAlignment(Qt.AlignCenter)
-        title.setFixedHeight(55)
-        layout.addWidget(title)
-        layout.addStretch()
-
-        back_button = QPushButton("Back to Main Menu")
-        back_button.clicked.connect(lambda: self._select_mode("Beginner"))
-        layout.addWidget(back_button, alignment=Qt.AlignHCenter)
-        layout.addStretch()
-        return page
-
     def _select_mode(self, mode: str) -> None:
-        """Switch between the Main Menu and the Advanced Mode page."""
+        """Keep the shared menu and switch only the program editor."""
         advanced = mode == "Advanced"
+        if advanced and not self._advanced_loaded:
+            opened = self.program_panel.opened
+            if opened is not None and not self.advanced_editor.load_program(opened):
+                self.advanced_button.setChecked(False)
+                self.beginner_button.setChecked(True)
+                return
+            self._advanced_loaded = True
+        self._advanced_mode = advanced
         self.beginner_button.setChecked(not advanced)
         self.advanced_button.setChecked(advanced)
-        if advanced:
-            self._pages.setCurrentWidget(self._advanced_page)
-            self.setWindowTitle("COSMIIC - Advanced Mode")
-        else:
-            self._pages.setCurrentWidget(self._main_menu_page)
-            self.setWindowTitle("COSMIIC - Main Menu")
+        self.program_panel.setVisible(not advanced)
+        self.advanced_editor.setVisible(advanced)
+        self._description_group.setFixedHeight(120 if advanced else 160)
+        self._menu_widget.setMaximumHeight(260 if advanced else 16777215)
+        self._body_layout.setStretchFactor(self.advanced_editor, 3 if advanced else 2)
+        self.setWindowTitle("COSMIIC - Advanced Mode" if advanced else "COSMIIC - Main Menu")
+        self._update_run_button()
 
     def _coming_soon(self) -> None:
         """Show a placeholder for future features."""
@@ -424,6 +425,16 @@ class MainMenuWindow(QMainWindow):
             QMessageBox.warning(self, "Could not open program", str(ex))
             return False
 
+        if self._advanced_mode:
+            if not self.advanced_editor.confirm_discard():
+                return False
+            if not self.advanced_editor.load_program(opened):
+                return False
+            self._advanced_loaded = True
+        else:
+            # Keep an Advanced draft intact when browsing Beginner programs.
+            if not self.advanced_editor.dirty:
+                self._advanced_loaded = False
         self.program_panel.show_program(opened)
         self._update_run_button(opened)
         self._remember_program(opened)
@@ -448,6 +459,11 @@ class MainMenuWindow(QMainWindow):
 
     def open_new_program_screen(self) -> None:
         """Show the New Program screen. A saved program opens here, ready to edit."""
+        if self._advanced_mode:
+            if self.advanced_editor.confirm_discard():
+                self.advanced_editor.new_program()
+                self._advanced_loaded = True
+            return
         from editor.new_program_window import NewProgramWindow
 
         if self.new_program_window is not None and self.new_program_window.isVisible():
@@ -484,8 +500,19 @@ class MainMenuWindow(QMainWindow):
         self.open_program_file(file_path)
 
     def _update_run_button(self, opened=None) -> None:
-        opened = opened or self.program_panel.opened
+        if self._advanced_mode:
+            opened = self.advanced_editor.snapshot()
+        else:
+            opened = opened or self.program_panel.opened
         if opened is None:
+            self.run_button.setEnabled(False)
+            if self._advanced_mode and not self.advanced_editor.has_program:
+                self.run_hint.setText("Open or create a program to run it.")
+            else:
+                self.run_hint.setText("Complete validation to open the execution screen.")
+            if self.wss_status_bar is not None:
+                program = self.advanced_editor.program() if self._advanced_mode else None
+                self.wss_status_bar.set_program_channels(program_channel_numbers(program) if program else None)
             return
         if self.wss_status_bar is not None:
             self.wss_status_bar.set_program_channels(program_channel_numbers(opened.program))
@@ -507,7 +534,7 @@ class MainMenuWindow(QMainWindow):
 
     def open_execution_screen(self) -> None:
         """Show the Execution / Status screen for the opened program."""
-        opened = self.program_panel.opened
+        opened = self.advanced_editor.snapshot() if self._advanced_mode else self.program_panel.opened
         if opened is None or self.adapter is None:
             return
         if self.execution_window is not None:
@@ -523,6 +550,9 @@ class MainMenuWindow(QMainWindow):
 
     def closeEvent(self, event) -> None:  # noqa: N802 (Qt name)
         """Stop the status bar timer and close the WSS link safely."""
+        if not self.advanced_editor.confirm_discard():
+            event.ignore()
+            return
         if self.execution_window is not None:
             self.execution_window.close()
         if self.new_program_window is not None:
