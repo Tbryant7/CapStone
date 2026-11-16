@@ -389,6 +389,26 @@ Menu, channel 1 shows pulse width `50 – 100`, amplitude `0 – 2`, frequency
 3. A 1 ms time step (like the email's example) imports fine but fails the
    **placeholder** time step minimum (10 ms) until COSMIIC confirms the limits.
 
+### Sprint 3: Resume after STOP
+
+```
+python run_menu.py --fake samples\matlab\per_channel_2ch.txt
+```
+
+1. **Connect**, **Run / Execute...**, **Run**.
+2. Press **STOP STIMULATION** part way. Output stops at once: both channels
+   show "Off" and the log ends with `stop_stimulation()`. The screen says
+   "Stopped by user at t = 4.18 s of 10 s. Output is off."
+3. Two buttons appear: **Restart from 0 s** and **Resume from 4.18 s**.
+4. **Resume**: "Ramping back up ... (1 of 50)". The amplitudes in the table
+   and log climb from near 0 over 1 s, then the program carries on from
+   4.18 s to the end.
+5. Stop again, then **Restart from 0 s**: starts over at step 1.
+6. Stop, then click **Disconnect** in the status bar: Resume is greyed out
+   ("Connect to the WSS first."). Connect again and it works. A *lost*
+   connection (the `drop` in the terminal demo, or an unplugged WSS) removes
+   Resume completely: only a restart is offered.
+
 ---
 
 ## 4. Test Pulse Window options
@@ -501,6 +521,7 @@ Confirm the values with COSMIIC before using real hardware.
 | `python -m pytest tests\test_matlab_import.py` | MATLAB / CSV import and time-series checks |
 | `python -m pytest tests\test_per_channel_import.py` | t, pw1, a1, freq1 layout (.mat / .txt / .csv) and frequency over time |
 | `python -m pytest tests\test_execution.py` | Run / Execute screen and its safety rules |
+| `python -m pytest tests\test_resume.py` | Resume after STOP (ramp up, restart, when it isn't offered) |
 | `python -m pytest tests\test_pulse_window_gui.py` | Test Pulse Window |
 | `python -m pytest -k disconnect` | Only tests with "disconnect" in the name |
 | `python -m pytest -rs` | Also say why skipped tests were skipped |

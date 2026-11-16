@@ -135,6 +135,13 @@ class ExecutionWindow(QMainWindow):
         self.run_button.setMinimumHeight(56)
         self.run_button.clicked.connect(self.run)
         buttons.addWidget(self.run_button, 1)
+        #: Shown after the user stops a time series part way.
+        self.resume_button = QPushButton("Resume")
+        self.resume_button.setObjectName("resumeButton")
+        self.resume_button.setMinimumHeight(56)
+        self.resume_button.clicked.connect(self.resume)
+        self.resume_button.setVisible(False)
+        buttons.addWidget(self.resume_button, 1)
         self.stop_button = QPushButton("STOP STIMULATION")
         self.stop_button.setObjectName("stopButton")
         self.stop_button.setMinimumHeight(56)
@@ -174,6 +181,9 @@ class ExecutionWindow(QMainWindow):
             #runButton { background: #e3f2e1; border: 2px solid #5a963f; border-radius: 6px;
                          font-size: 16px; font-weight: bold; }
             #runButton:disabled { background: #eeeeee; border-color: #bdbdbd; color: #9e9e9e; }
+            #resumeButton { background: #e3edf9; border: 2px solid #3a7bd5; border-radius: 6px;
+                            font-size: 15px; font-weight: bold; }
+            #resumeButton:disabled { background: #eeeeee; border-color: #bdbdbd; color: #9e9e9e; }
             #stopButton { background: #c62828; color: white; border-radius: 6px;
                           font-size: 20px; font-weight: bold; }
             #stopButton:pressed { background: #8e0000; }
@@ -185,6 +195,17 @@ class ExecutionWindow(QMainWindow):
     def run(self) -> None:
         try:
             self.runner.start()
+        except RunRefused as ex:
+            self.reason_label.setText(str(ex))
+            return
+        if self.runner.state is RunState.RUNNING:
+            self._timer.start()
+        self.refresh()
+
+    def resume(self) -> None:
+        """Continue a stopped time series where it stopped (with a ramp up)."""
+        try:
+            self.runner.resume()
         except RunRefused as ex:
             self.reason_label.setText(str(ex))
             return
@@ -204,7 +225,8 @@ class ExecutionWindow(QMainWindow):
         self.refresh()
 
     def _on_adapter_status(self, status: AdapterStatus) -> None:
-        if status.state is ConnectionState.LOST and self.runner.state is RunState.RUNNING:
+        if status.state is ConnectionState.LOST:
+            # Ends a run; and a stopped run can't be resumed after a lost link.
             self._timer.stop()
             self.runner.connection_lost(status.detail or "WSS connection lost")
         self.refresh()
@@ -220,9 +242,21 @@ class ExecutionWindow(QMainWindow):
 
         total = len(runner.frames)
         self.progress.setValue(runner.position)
-        if runner.is_time_series:
-            frame = runner.current
-            at = f"t = {frame.time_s:g} s" if frame else "t = 0 s"
+        if runner.is_ramping:
+            self.progress_label.setText(
+                f"Ramping back up to the values at t = {runner.resume_target_s:g} s "
+                f"({runner.ramp_position} of {runner.ramp_total})  ·  {runner.step_ms:g} ms per step"
+            )
+        elif runner.is_time_series:
+            if runner.resume_time_s is not None:  # stopped part way
+                at_s = runner.resume_time_s
+            elif runner.current is not None:
+                at_s = runner.current.time_s
+            elif runner.position:  # finished: the last step
+                at_s = runner.frames[runner.position - 1].time_s
+            else:
+                at_s = 0
+            at = f"t = {at_s:g} s"
             self.progress_label.setText(
                 f"Step {runner.position} of {total}  ·  {at} of {runner.duration_s:g} s  ·  "
                 f"{runner.step_ms:g} ms per step"
@@ -235,6 +269,16 @@ class ExecutionWindow(QMainWindow):
         self._fill_channels()
         reason = runner.why_not_runnable()
         self.run_button.setEnabled(not reason)
+        resume_at = runner.resume_time_s
+        self.resume_button.setVisible(resume_at is not None)
+        self.run_button.setText("Restart from 0 s" if resume_at is not None else "Run")
+        if resume_at is not None:
+            resume_reason = runner.why_not_resumable()
+            self.resume_button.setText(f"Resume from {resume_at:g} s")
+            self.resume_button.setEnabled(not resume_reason)
+            self.resume_button.setToolTip(
+                resume_reason or "Ramps the amplitude back up from 0, then continues the program."
+            )
         if state is RunState.RUNNING:
             self.reason_label.clear()
         else:

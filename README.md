@@ -215,6 +215,12 @@ which screen calls it:
 
 - only programs that passed validation run (REQ-17)
 - STOP always works and stops output first (REQ-19)
+- after a STOP part way through a time series, **Resume from X s** continues
+  from where it stopped, ramping the amplitude back up from 0 over 1 s
+  (`RESUME_RAMP_S`) first, and **Restart from 0 s** starts over. Resume
+  re-checks connection, validation and channels, and is not offered after a
+  lost connection, an error or a finished program. (This adds "Stopped,
+  can resume" to SDS Figure 3.3: to confirm with the client.)
 - a lost connection ends the run as an error and stops output (SRS §5.2)
 - closing the screen or the Main Menu never leaves stimulation running
 - **fake / simulated WSS only for now**: real hardware is refused until
