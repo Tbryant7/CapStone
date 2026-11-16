@@ -3,6 +3,7 @@ per-channel commands and runs them on the WSS (simulated mode for now)."""
 
 from .program_runner import (
     ALLOWED_MODES,
+    RESUME_RAMP_S,
     ChannelCommand,
     Frame,
     ProgramRunner,
@@ -10,12 +11,14 @@ from .program_runner import (
     RunState,
     build_frames,
     channel_mismatch_message,
+    ramp_frames,
     program_channel_numbers,
     unavailable_channels,
 )
 
 __all__ = [
     "ALLOWED_MODES",
+    "RESUME_RAMP_S",
     "ChannelCommand",
     "Frame",
     "ProgramRunner",
@@ -23,6 +26,7 @@ __all__ = [
     "RunState",
     "build_frames",
     "channel_mismatch_message",
+    "ramp_frames",
     "program_channel_numbers",
     "unavailable_channels",
 ]
